@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { DetailedCompetitorModal } from './DetailedCompetitorModal';
 
 interface CandlestickChartProps {
@@ -87,74 +87,107 @@ export function RateCandlestickChart({
   return (
     <>
       <tr className="border-b border-[#e0e0e0] bg-white" data-tour="competitor-analysis-row">
-        <td colSpan={2} className="px-4 py-3 border-r border-[#e0e0e0] align-top bg-white">
-          <div className="pl-4">
-            <div className="flex items-center justify-between mb-1.5">
-              <div>
-                <div className="text-[11px] font-semibold text-[#333333] mb-0.5">Competitor Rate & Parity Analysis</div>
-                <div className="text-[10px] text-gray-500">Compare your rates vs competitors and track parity status</div>
+        <td colSpan={2} className="px-3 py-2.5 border-r border-[#e0e0e0] align-top bg-white">
+          <div className="pl-2 pr-1 w-full min-w-0">
+            <div
+              className="rounded-md border border-[#e8e8e8] bg-[#fafafa] p-2.5"
+              data-tour="competitor-analysis-panel"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[11px] font-semibold text-[#1a1a1a] leading-snug tracking-tight">
+                    Competitor Rate & Parity Analysis
+                  </h3>
+                  <p className="text-[10px] text-gray-500 mt-1 leading-snug">
+                    Compare your rates vs competitors and track parity status
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDetailedView(true)}
+                  className="shrink-0 inline-flex items-center rounded-md border border-[#c5d8f0] bg-white px-2 py-1 text-[10px] font-medium text-[#1565C0] transition-colors hover:bg-[#f0f6fc] hover:border-[#90caf9]"
+                  data-tour="view-details-button"
+                >
+                  View Details
+                </button>
               </div>
-              <button
-                onClick={() => setShowDetailedView(true)}
-                className="text-[10px] text-[#2196F3] hover:text-[#1976D2] font-medium hover:underline whitespace-nowrap ml-4"
-                data-tour="view-details-button"
-              >
-                View Details
-              </button>
-            </div>
 
-            {/* Simple Legend */}
-            {showLegend && (
-              <div className="pt-1.5 border-t border-gray-200">
-                <div className="flex gap-6">
-                  {/* Rate Legends */}
-                  <div className="flex-1">
-                    <div className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide mb-2">COMPETITOR LEGENDS</div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-0.5 bg-green-500 shrink-0"></div>
-                        <span className="text-[9px] text-gray-600">Max Competitor Rate</span>
-                      </div>
+              {showLegend && (
+                <div className="mt-2 border-t border-slate-200/60 pt-2">
+                  <p className="sr-only">
+                    Legend — Competitor: max, min, my rate. Parity: column background matches win, meet, or loss.
+                  </p>
+                  <div
+                    className="rounded-md border border-slate-200/50 bg-gradient-to-b from-slate-50/90 to-white/60 px-2 py-2"
+                    role="group"
+                    aria-label="Chart legend"
+                  >
+                    {/* Single grid: column 1 = category, column 2 = items — same start edge for both rows */}
+                    <div className="grid grid-cols-[minmax(5.25rem,auto)_minmax(0,1fr)] items-start gap-x-3 gap-y-2">
+                      <span className="pt-[3px] text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-400">
+                        Competitor
+                      </span>
+                      <ul className="m-0 flex min-w-0 list-none flex-wrap items-center gap-x-3 gap-y-1 p-0 text-[10px] leading-none text-slate-600">
+                        <li className="flex items-center gap-1.5">
+                          <span
+                            className="inline-block h-[3px] w-[18px] shrink-0 rounded-sm bg-emerald-500 shadow-[0_0_0_1px_rgba(255,255,255,0.4)_inset]"
+                            aria-hidden
+                          />
+                          <span className="font-normal">Max</span>
+                        </li>
+                        <li className="text-slate-300 select-none" aria-hidden>
+                          ·
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <span className="inline-flex shrink-0 items-center" aria-hidden>
+                            <span className="h-[3px] w-[5px] rounded-l-sm bg-[#2196F3]" />
+                            <span className="size-[5px] rounded-full bg-[#2196F3]" />
+                            <span className="h-[3px] w-[5px] rounded-r-sm bg-[#2196F3]" />
+                          </span>
+                          <span className="font-normal">My rate</span>
+                        </li>
+                        <li className="text-slate-300 select-none" aria-hidden>
+                          ·
+                        </li>
+                        <li className="flex items-center gap-1.5">
+                          <span
+                            className="inline-block h-[3px] w-[18px] shrink-0 rounded-sm bg-red-500 shadow-[0_0_0_1px_rgba(255,255,255,0.35)_inset]"
+                            aria-hidden
+                          />
+                          <span className="font-normal">Min</span>
+                        </li>
+                      </ul>
 
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center shrink-0">
-                          <div className="w-1.5 h-0.5 bg-[#2196F3]"></div>
-                          <div className="w-1.5 h-1.5 bg-[#2196F3] rounded-full"></div>
-                          <div className="w-1.5 h-0.5 bg-[#2196F3]"></div>
-                        </div>
-                        <span className="text-[9px] text-gray-600">My Rate</span>
-                      </div>
+                      <div
+                        className="col-span-2 h-px bg-gradient-to-r from-slate-200/40 via-slate-200/25 to-transparent"
+                        aria-hidden
+                      />
 
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-0.5 bg-red-500 shrink-0"></div>
-                        <span className="text-[9px] text-gray-600">Min Competitor Rate</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Parity Legends */}
-                  <div className="flex-1">
-                    <div className="text-[9px] font-semibold text-gray-700 uppercase tracking-wide mb-2">PARITY LEGENDS</div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-1.5 bg-[#f97316] shrink-0 rounded-sm"></div>
-                        <span className="text-[9px] text-gray-600">Win</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-1.5 bg-[#22c55e] shrink-0 rounded-sm"></div>
-                        <span className="text-[9px] text-gray-600">Meet</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-1.5 bg-[#ef4444] shrink-0 rounded-sm"></div>
-                        <span className="text-[9px] text-gray-600">Loss</span>
-                      </div>
+                      <span className="pt-[3px] text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-400">
+                        Parity
+                      </span>
+                      <ul className="m-0 flex min-w-0 list-none flex-wrap items-center gap-1.5 p-0">
+                        <li>
+                          <span className="inline-flex items-center rounded-md border border-orange-200/90 bg-gradient-to-b from-orange-50 to-orange-50/70 px-2 py-0.5 text-[9px] font-medium text-orange-900/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                            Win
+                          </span>
+                        </li>
+                        <li>
+                          <span className="inline-flex items-center rounded-md border border-emerald-200/90 bg-gradient-to-b from-emerald-50 to-emerald-50/70 px-2 py-0.5 text-[9px] font-medium text-emerald-900/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                            Meet
+                          </span>
+                        </li>
+                        <li>
+                          <span className="inline-flex items-center rounded-md border border-red-200/90 bg-gradient-to-b from-red-50 to-red-50/70 px-2 py-0.5 text-[9px] font-medium text-red-900/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                            Loss
+                          </span>
+                        </li>
+                      </ul>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </td>
         {chartData.map((data, idx) => {
@@ -171,6 +204,7 @@ export function RateCandlestickChart({
           return (
             <ChartColumn
               key={idx}
+              columnIndex={idx}
               data={data}
               myRateY={myRateY}
               maxY={maxY}
@@ -205,6 +239,7 @@ export function RateCandlestickChart({
 }
 
 function ChartColumn({
+  columnIndex,
   data,
   myRateY,
   maxY,
@@ -216,6 +251,7 @@ function ChartColumn({
   chartHeight,
   dataTour
 }: {
+  columnIndex: number;
   data: {
     rate: number;
     min: number;
@@ -234,6 +270,8 @@ function ChartColumn({
   dataTour?: string;
 }) {
   const [isHovered, setIsHovered] = useState(false);
+  const revealClipId = useId().replace(/:/g, '');
+  const revealDelayMs = columnIndex * 42;
 
   return (
     <td
@@ -294,13 +332,20 @@ function ChartColumn({
         className="overflow-hidden block max-w-full"
         preserveAspectRatio="none"
       >
-        {/* Calculate pixel heights for proper rendering */}
         <defs>
-          <clipPath id="chart-area">
-            <rect x="0" y="0" width="100%" height="100%" />
+          <clipPath id={revealClipId}>
+            <rect
+              x="0"
+              y="0"
+              width="0"
+              height="100%"
+              className="rate-chart-reveal-wipe"
+              style={{ animationDelay: `${revealDelayMs}ms` }}
+            />
           </clipPath>
         </defs>
 
+        <g clipPath={`url(#${revealClipId})`}>
         {/* Vertical range line (from min to max) - always show */}
         <line
           x1="50%"
@@ -366,6 +411,7 @@ function ChartColumn({
           stroke="white" 
           strokeWidth="2" 
         />
+        </g>
       </svg>
       </div>
     </td>

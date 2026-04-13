@@ -205,3 +205,24 @@
 .animate-slide-out-right {
   animation: slide-out-right 0.3s ease-in;
 }
+
+/* Rate candlestick: “build” reveal when accordion opens (clip wipes L→R; stagger per column) */
+@keyframes rate-chart-reveal-wipe {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.rate-chart-reveal-wipe {
+  animation: rate-chart-reveal-wipe 0.58s cubic-bezier(0.33, 1, 0.48, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rate-chart-reveal-wipe {
+    width: 100% !important;
+    animation: none !important;
+  }
+}
