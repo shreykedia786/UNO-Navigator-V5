@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, ArrowRight, ArrowLeft, Sparkles, ChevronRight } from 'lucide-react';
+import { LegendIconMax, LegendIconMin, LegendIconMyRate } from './CompetitorChartLegendIcons';
 
 interface OnboardingStep {
   id: string;
@@ -456,86 +457,17 @@ export function OnboardingTour({ onComplete, onStepChange }: OnboardingTourProps
               <div className="rounded-xl border border-slate-200/90 bg-white p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
                 <div className="grid grid-cols-3 gap-1.5">
                   <div className="rounded-lg border border-emerald-200/90 bg-emerald-50/90 px-1.5 py-2 text-center">
-                    <svg viewBox="0 0 28 36" className="mx-auto h-10 w-8" aria-hidden>
-                      <line
-                        x1="14"
-                        y1="10"
-                        x2="14"
-                        y2="30"
-                        stroke="#90a4ae"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      />
-                      <line
-                        x1="7"
-                        y1="10"
-                        x2="21"
-                        y2="10"
-                        stroke="#4caf50"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                      />
-                      <circle cx="14" cy="10" r="2.8" fill="#4caf50" stroke="#fff" strokeWidth="1.2" />
-                    </svg>
+                    <LegendIconMax className="mx-auto h-10 w-8" />
                     <p className="mt-1.5 text-[11px] font-bold text-gray-900">Max</p>
                     <p className="mt-0.5 text-[9px] leading-tight text-gray-600">OTA high</p>
                   </div>
                   <div className="rounded-lg border border-blue-200/90 bg-blue-50/90 px-1.5 py-2 text-center">
-                    <svg viewBox="0 0 28 36" className="mx-auto h-10 w-8" aria-hidden>
-                      <line
-                        x1="14"
-                        y1="8"
-                        x2="14"
-                        y2="30"
-                        stroke="#90a4ae"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      />
-                      <line
-                        x1="2"
-                        y1="18"
-                        x2="10"
-                        y2="18"
-                        stroke="#2196F3"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                      <line
-                        x1="18"
-                        y1="18"
-                        x2="26"
-                        y2="18"
-                        stroke="#2196F3"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                      <circle cx="14" cy="18" r="3.6" fill="#2196F3" stroke="#fff" strokeWidth="1.8" />
-                    </svg>
+                    <LegendIconMyRate className="mx-auto h-10 w-8" />
                     <p className="mt-1.5 text-[11px] font-bold text-gray-900">Yours</p>
                     <p className="mt-0.5 text-[9px] leading-tight text-gray-600">On spine</p>
                   </div>
                   <div className="rounded-lg border border-red-200/90 bg-red-50/90 px-1.5 py-2 text-center">
-                    <svg viewBox="0 0 28 36" className="mx-auto h-10 w-8" aria-hidden>
-                      <line
-                        x1="14"
-                        y1="8"
-                        x2="14"
-                        y2="28"
-                        stroke="#90a4ae"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      />
-                      <line
-                        x1="7"
-                        y1="28"
-                        x2="21"
-                        y2="28"
-                        stroke="#f44336"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                      />
-                      <circle cx="14" cy="28" r="2.8" fill="#f44336" stroke="#fff" strokeWidth="1.2" />
-                    </svg>
+                    <LegendIconMin className="mx-auto h-10 w-8" />
                     <p className="mt-1.5 text-[11px] font-bold text-gray-900">Min</p>
                     <p className="mt-0.5 text-[9px] leading-tight text-gray-600">OTA low</p>
                   </div>

@@ -630,26 +630,10 @@ function ParityAnalysisContent({
               </th>
             ))}
           </tr>
-          {/* Daily overall parity % — light neutral band vs date row (#f5f5f5), distinct from Your Rates blue */}
-          <tr className="border-b-2 border-[#d4d8de] bg-[#e2e5ea]">
-            <th className="px-3 py-2 border-r border-[#d4d8de] bg-[#e2e5ea]" colSpan={3}>
-              <div className="text-left text-[11px] font-semibold text-[#333333]">Overall Parity %</div>
-            </th>
-            {visibleDates.map((date, idx) => {
-              const parityPercent = getDateParityPercentage(idx);
-              return (
-                <th key={idx} className="px-2 py-2 border-r border-[#d4d8de] bg-[#e2e5ea]">
-                  <div className="text-[12px] text-[#333333] font-semibold">
-                    {parityPercent}%
-                  </div>
-                </th>
-              );
-            })}
-          </tr>
         </thead>
 
         <tbody>
-          {/* Your Rates Row */}
+          {/* Your Rates — directly under date headers */}
           <tr className="border-b-2 border-[#2196F3] bg-[#E3F2FD]">
             <td className="px-3 py-3 font-semibold text-[13px] text-[#333333] border-r border-[#e0e0e0] sticky left-0 bg-[#E3F2FD] z-10">
               Your Rates
@@ -666,6 +650,23 @@ function ParityAnalysisContent({
                 )}
               </td>
             ))}
+          </tr>
+
+          {/* Daily overall parity % — below Your Rates; neutral band distinct from blue row above */}
+          <tr className="border-b-2 border-[#d4d8de] bg-[#e2e5ea]">
+            <td className="px-3 py-2 border-r border-[#d4d8de] bg-[#e2e5ea]" colSpan={3}>
+              <div className="text-left text-[11px] font-semibold text-[#333333]">Overall Parity %</div>
+            </td>
+            {visibleDates.map((date, idx) => {
+              const parityPercent = getDateParityPercentage(idx);
+              return (
+                <td key={idx} className="px-2 py-2 border-r border-[#d4d8de] bg-[#e2e5ea]">
+                  <div className="text-[12px] text-[#333333] font-semibold text-center">
+                    {parityPercent}%
+                  </div>
+                </td>
+              );
+            })}
           </tr>
 
           {/* Channel Rows */}

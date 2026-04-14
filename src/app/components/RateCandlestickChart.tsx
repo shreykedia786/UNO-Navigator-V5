@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { LegendIconMax, LegendIconMin, LegendIconMyRate } from './CompetitorChartLegendIcons';
 import { DetailedCompetitorModal } from './DetailedCompetitorModal';
 
 interface CandlestickChartProps {
@@ -118,67 +119,52 @@ export function RateCandlestickChart({
                     Legend — Competitor: max, min, my rate. Parity: column background matches win, meet, or loss.
                   </p>
                   <div
-                    className="rounded-md border border-slate-200/50 bg-gradient-to-b from-slate-50/90 to-white/60 px-2 py-2"
+                    className="rounded-lg border border-slate-200/70 bg-white px-2.5 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
                     role="group"
                     aria-label="Chart legend"
                   >
-                    {/* Single grid: column 1 = category, column 2 = items — same start edge for both rows */}
-                    <div className="grid grid-cols-[minmax(5.25rem,auto)_minmax(0,1fr)] items-start gap-x-3 gap-y-2">
-                      <span className="pt-[3px] text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-400">
+                    {/* Labels stay aligned; full-width rule splits competitor vs parity */}
+                    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 text-[10px] leading-none text-slate-600">
+                      <span className="shrink-0 pt-px text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                         Competitor
                       </span>
-                      <ul className="m-0 flex min-w-0 list-none flex-wrap items-center gap-x-3 gap-y-1 p-0 text-[10px] leading-none text-slate-600">
-                        <li className="flex items-center gap-1.5">
-                          <span
-                            className="inline-block h-[3px] w-[18px] shrink-0 rounded-sm bg-emerald-500 shadow-[0_0_0_1px_rgba(255,255,255,0.4)_inset]"
-                            aria-hidden
-                          />
-                          <span className="font-normal">Max</span>
+                      <ul className="m-0 flex list-none items-center gap-x-3 p-0">
+                        <li className="flex shrink-0 items-center gap-1">
+                          <LegendIconMax className="h-[18px] w-[14px]" />
+                          <span className="font-medium text-slate-700">Max</span>
                         </li>
-                        <li className="text-slate-300 select-none" aria-hidden>
-                          ·
+                        <li className="flex shrink-0 items-center gap-1">
+                          <LegendIconMyRate className="h-[18px] w-[14px]" />
+                          <span className="font-medium text-slate-700">My rate</span>
                         </li>
-                        <li className="flex items-center gap-1.5">
-                          <span className="inline-flex shrink-0 items-center" aria-hidden>
-                            <span className="h-[3px] w-[5px] rounded-l-sm bg-[#2196F3]" />
-                            <span className="size-[5px] rounded-full bg-[#2196F3]" />
-                            <span className="h-[3px] w-[5px] rounded-r-sm bg-[#2196F3]" />
-                          </span>
-                          <span className="font-normal">My rate</span>
-                        </li>
-                        <li className="text-slate-300 select-none" aria-hidden>
-                          ·
-                        </li>
-                        <li className="flex items-center gap-1.5">
-                          <span
-                            className="inline-block h-[3px] w-[18px] shrink-0 rounded-sm bg-red-500 shadow-[0_0_0_1px_rgba(255,255,255,0.35)_inset]"
-                            aria-hidden
-                          />
-                          <span className="font-normal">Min</span>
+                        <li className="flex shrink-0 items-center gap-1">
+                          <LegendIconMin className="h-[18px] w-[14px]" />
+                          <span className="font-medium text-slate-700">Min</span>
                         </li>
                       </ul>
 
                       <div
-                        className="col-span-2 h-px bg-gradient-to-r from-slate-200/40 via-slate-200/25 to-transparent"
+                        className="col-span-2 my-2.5 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"
+                        role="separator"
                         aria-hidden
                       />
 
-                      <span className="pt-[3px] text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-400">
+                      <span className="shrink-0 pt-px text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                         Parity
                       </span>
-                      <ul className="m-0 flex min-w-0 list-none flex-wrap items-center gap-1.5 p-0">
+                      <ul className="m-0 flex list-none items-center gap-1.5 p-0">
                         <li>
-                          <span className="inline-flex items-center rounded-md border border-orange-200/90 bg-gradient-to-b from-orange-50 to-orange-50/70 px-2 py-0.5 text-[9px] font-medium text-orange-900/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                          <span className="inline-flex rounded-full border border-orange-200/90 bg-orange-50/90 px-2 py-0.5 text-[9px] font-medium text-orange-900">
                             Win
                           </span>
                         </li>
                         <li>
-                          <span className="inline-flex items-center rounded-md border border-emerald-200/90 bg-gradient-to-b from-emerald-50 to-emerald-50/70 px-2 py-0.5 text-[9px] font-medium text-emerald-900/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                          <span className="inline-flex rounded-full border border-emerald-200/90 bg-emerald-50/90 px-2 py-0.5 text-[9px] font-medium text-emerald-900">
                             Meet
                           </span>
                         </li>
                         <li>
-                          <span className="inline-flex items-center rounded-md border border-red-200/90 bg-gradient-to-b from-red-50 to-red-50/70 px-2 py-0.5 text-[9px] font-medium text-red-900/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                          <span className="inline-flex rounded-full border border-red-200/90 bg-red-50/90 px-2 py-0.5 text-[9px] font-medium text-red-900">
                             Loss
                           </span>
                         </li>
