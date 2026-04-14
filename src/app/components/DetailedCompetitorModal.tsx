@@ -1,5 +1,6 @@
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
+import { LegendIconMax, LegendIconMin, LegendIconMyRate } from './CompetitorChartLegendIcons';
 
 interface EventData {
   name: string;
@@ -346,31 +347,32 @@ export function DetailedCompetitorModal({
 
               {/* Chart Row with Legend */}
               <tr className="border-b border-[#e0e0e0]">
-                <td className="px-4 py-4 border-r border-[#e0e0e0] align-top sticky left-0 bg-white z-10">
-                  <div className="space-y-2">
-                    <div className="text-[12px] font-semibold text-[#333333] mb-2">Chart Legend</div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center">
-                        <div className="w-3 h-0.5 bg-green-500"></div>
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full -ml-0.5"></div>
-                      </div>
-                      <span className="text-[11px] text-gray-600">Max Competitor</span>
+                <td className="px-3 py-3 border-r border-[#e0e0e0] align-top sticky left-0 bg-white z-10">
+                  <p className="sr-only">
+                    Legend — Competitor chart: max and min OTA range, your rate on the spine.
+                  </p>
+                  <div
+                    className="rounded-lg border border-slate-200/70 bg-white px-2.5 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                    role="group"
+                    aria-label="Competitor chart legend"
+                  >
+                    <div className="mb-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Competitor
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-0.5">
-                        <div className="w-2 h-0.5 bg-[#2196F3]"></div>
-                        <div className="w-1.5 h-1.5 bg-[#2196F3] rounded-full"></div>
-                        <div className="w-2 h-0.5 bg-[#2196F3]"></div>
-                      </div>
-                      <span className="text-[11px] text-gray-600">Your Rate</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center">
-                        <div className="w-3 h-0.5 bg-red-500"></div>
-                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full -ml-0.5"></div>
-                      </div>
-                      <span className="text-[11px] text-gray-600">Min Competitor</span>
-                    </div>
+                    <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[10px] leading-none text-slate-600">
+                      <li className="flex items-center gap-1.5">
+                        <LegendIconMax className="h-[18px] w-[14px] shrink-0" />
+                        <span className="font-medium text-slate-700">Max</span>
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <LegendIconMyRate className="h-[18px] w-[14px] shrink-0" />
+                        <span className="font-medium text-slate-700">My rate</span>
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <LegendIconMin className="h-[18px] w-[14px] shrink-0" />
+                        <span className="font-medium text-slate-700">Min</span>
+                      </li>
+                    </ul>
                   </div>
                 </td>
                 {visibleChartData.map((data, idx) => {
@@ -406,10 +408,10 @@ export function DetailedCompetitorModal({
                 })}
               </tr>
 
-              {/* Average Competitor Rates Row */}
+              {/* Average Competitor Rates Row — same band as Overall Parity % row (parity tab) */}
               {!hideCompetitors && (
-                <tr className="border-b-2 border-[#2196F3] bg-[#E3F2FD]">
-                  <td className="px-4 py-3 font-semibold text-[13px] text-[#333333] border-r border-[#e0e0e0] sticky left-0 bg-[#E3F2FD] z-10">
+                <tr className="border-b-2 border-[#d4d8de] bg-[#e2e5ea]">
+                  <td className="px-4 py-3 font-semibold text-[13px] text-[#333333] border-r border-[#d4d8de] sticky left-0 bg-[#e2e5ea] z-10">
                     Avg. Compset Rates
                   </td>
                   {visibleRates.map((myRate, dateIdx) => {
@@ -420,11 +422,14 @@ export function DetailedCompetitorModal({
                       : null;
 
                     return (
-                      <td key={dateIdx} className="px-3 py-3 text-center text-[13px] font-semibold border-r border-[#e0e0e0]">
+                      <td
+                        key={dateIdx}
+                        className="px-3 py-3 text-center text-[13px] font-semibold border-r border-[#d4d8de] bg-[#e2e5ea]"
+                      >
                         {avgRate === null ? (
-                          <span className="text-gray-400 text-[12px]">N/A</span>
+                          <span className="text-gray-400 text-[12px] font-normal">N/A</span>
                         ) : (
-                          <span className="text-[#2196F3]">€{avgRate}</span>
+                          <span className="text-black">€{avgRate}</span>
                         )}
                       </td>
                     );
@@ -614,17 +619,17 @@ function ParityAnalysisContent({
         {/* Date Headers */}
         <thead className="sticky top-0 bg-white z-10">
           <tr className="border-b border-[#e0e0e0]">
-            <th className="px-3 py-2 border-r border-[#e0e0e0] bg-[#f5f5f5]">
+            <th className="px-3 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
               <div className="text-left text-[11px] font-semibold text-[#333333]">Channels</div>
             </th>
-            <th className="px-2 py-2 border-r border-[#e0e0e0] bg-[#f5f5f5]">
+            <th className="px-2 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
               <div className="text-[10px] font-semibold text-[#333333]">Win/Meet/Loss</div>
             </th>
-            <th className="px-2 py-2 border-r border-[#e0e0e0] bg-[#f5f5f5]">
+            <th className="px-2 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
               <div className="text-[10px] font-semibold text-[#333333]">Parity Score</div>
             </th>
             {visibleDates.map((date, idx) => (
-              <th key={idx} className="px-2 py-2 border-r border-[#e0e0e0] bg-[#f5f5f5]">
+              <th key={idx} className="px-2 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
                 <div className="text-[11px] font-bold text-[#333333]">{date.day}</div>
                 <div className="text-[11px] font-semibold text-[#333333] mt-0.5">{date.date} {date.month}</div>
               </th>
@@ -635,14 +640,14 @@ function ParityAnalysisContent({
         <tbody>
           {/* Your Rates — directly under date headers */}
           <tr className="border-b-2 border-[#2196F3] bg-[#E3F2FD]">
-            <td className="px-3 py-3 font-semibold text-[13px] text-[#333333] border-r border-[#e0e0e0] sticky left-0 bg-[#E3F2FD] z-10">
+            <td className="px-3 py-3.5 font-semibold text-[13px] text-[#333333] border-r border-[#e0e0e0] sticky left-0 bg-[#E3F2FD] z-10">
               Your Rates
             </td>
-            <td className="px-2 py-3 border-r border-[#e0e0e0] bg-[#E3F2FD]" colSpan={2}>
+            <td className="px-2 py-3.5 border-r border-[#e0e0e0] bg-[#E3F2FD]" colSpan={2}>
               {/* Empty cells for Win/Meet/Loss and Parity Score columns */}
             </td>
             {visibleRates.map((rate, idx) => (
-              <td key={idx} className="px-2 py-2 text-center text-[13px] font-semibold border-r border-[#e0e0e0] bg-[#E3F2FD]">
+              <td key={idx} className="px-2 py-3.5 text-center text-[13px] font-semibold border-r border-[#e0e0e0] bg-[#E3F2FD]">
                 {rate === 0 || !rate ? (
                   <span className="text-gray-400 font-normal">Sold Out</span>
                 ) : (
@@ -654,13 +659,13 @@ function ParityAnalysisContent({
 
           {/* Daily overall parity % — below Your Rates; neutral band distinct from blue row above */}
           <tr className="border-b-2 border-[#d4d8de] bg-[#e2e5ea]">
-            <td className="px-3 py-2 border-r border-[#d4d8de] bg-[#e2e5ea]" colSpan={3}>
+            <td className="px-3 py-3.5 border-r border-[#d4d8de] bg-[#e2e5ea]" colSpan={3}>
               <div className="text-left text-[11px] font-semibold text-[#333333]">Overall Parity %</div>
             </td>
             {visibleDates.map((date, idx) => {
               const parityPercent = getDateParityPercentage(idx);
               return (
-                <td key={idx} className="px-2 py-2 border-r border-[#d4d8de] bg-[#e2e5ea]">
+                <td key={idx} className="px-2 py-3.5 border-r border-[#d4d8de] bg-[#e2e5ea]">
                   <div className="text-[12px] text-[#333333] font-semibold text-center">
                     {parityPercent}%
                   </div>
@@ -676,16 +681,16 @@ function ParityAnalysisContent({
             return (
               <tr key={channelIdx} className="border-b border-[#e0e0e0]">
                 {/* Channel Name */}
-                <td className="px-3 py-3 border-r border-[#e0e0e0] sticky left-0 bg-white z-10">
+                <td className="px-3 py-4 border-r border-[#e0e0e0] sticky left-0 bg-white z-10">
                   <div className="text-[12px] font-medium text-[#333333]">
                     {channelName}
                   </div>
                 </td>
 
                 {/* Win/Meet/Loss — flat colors, single row; % inside segment when wide enough */}
-                <td className="border-r border-[#e0e0e0] bg-white px-2 py-2.5">
+                <td className="border-r border-[#e0e0e0] bg-white px-2 py-4">
                   <div
-                    className="flex h-5 overflow-hidden rounded border border-[#e8e8e8]"
+                    className="flex h-6 overflow-hidden rounded border border-[#e8e8e8]"
                     title={`Win ${Math.round(distribution.winPercent)}% · Meet ${Math.round(distribution.meetPercent)}% · Loss ${Math.round(distribution.lossPercent)}%`}
                   >
                     {distribution.winPercent > 0 && (
@@ -728,7 +733,7 @@ function ParityAnalysisContent({
                 </td>
 
                 {/* Parity Score */}
-                <td className="px-2 py-3 text-center border-r border-[#e0e0e0] bg-white">
+                <td className="px-2 py-4 text-center border-r border-[#e0e0e0] bg-white">
                   <div className="text-[11px] font-semibold text-[#333333]">
                     {distribution.parityScore}%
                   </div>
@@ -742,7 +747,7 @@ function ParityAnalysisContent({
                   // No data available
                   if (cellDisplay.type === 'no-data') {
                     return (
-                      <td key={dateIdx} className="px-2 py-3 text-center border-r border-[#e0e0e0] bg-gray-50">
+                      <td key={dateIdx} className="px-2 py-4 text-center border-r border-[#e0e0e0] bg-gray-50">
                         <span className="text-[10px] text-gray-400">—</span>
                       </td>
                     );
@@ -751,7 +756,7 @@ function ParityAnalysisContent({
                   // Sold out - green background, special text
                   if (cellDisplay.type === 'sold-out') {
                     return (
-                      <td key={dateIdx} className="px-2 py-3 text-center border-r border-[#e0e0e0] bg-[#dcfce7]">
+                      <td key={dateIdx} className="px-2 py-4 text-center border-r border-[#e0e0e0] bg-[#dcfce7]">
                         <span className="text-[11px] font-semibold text-[#166534]">Sold Out</span>
                       </td>
                     );
@@ -773,7 +778,7 @@ function ParityAnalysisContent({
                   return (
                     <td
                       key={dateIdx}
-                      className="px-2 py-3 text-center border-r border-[#e0e0e0] relative"
+                      className="px-2 py-4 text-center border-r border-[#e0e0e0] relative"
                       style={{ backgroundColor: bgColor }}
                       onMouseEnter={() => isLoss && setHoveredCell({ channelIdx, dateIdx })}
                       onMouseLeave={() => setHoveredCell(null)}
