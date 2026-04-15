@@ -387,9 +387,10 @@ export function DetailedCompetitorModal({
                   const nextMyRateY = nextData ? valueToY(nextData.rate) : null;
 
                   return (
-                    <td key={idx} className="px-0 py-2 border-r border-[#e0e0e0] bg-white relative align-middle w-full">
+                    <td key={idx} className="px-0 py-2 border-r border-[#e0e0e0] bg-white relative align-middle w-full overflow-visible">
                       <div className="flex items-center justify-center w-full pt-1 pb-2">
                         <ChartCell
+                          date={data.date}
                           myRate={data.rate}
                           minRate={data.min}
                           maxRate={data.max}
@@ -842,6 +843,7 @@ function ParityAnalysisContent({
 }
 
 function ChartCell({
+  date,
   myRate,
   minRate,
   maxRate,
@@ -854,6 +856,7 @@ function ChartCell({
   hasNext,
   hasEvent
 }: {
+  date: { day: string; date: string; month: string };
   myRate: number;
   minRate: number;
   maxRate: number;
@@ -866,15 +869,49 @@ function ChartCell({
   hasNext: boolean;
   hasEvent: boolean;
 }) {
+  const [isHovered, setIsHovered] = useState(false);
   const chartHeight = 112;
 
   return (
-    <svg
-      width="100%"
-      height={chartHeight}
-      className="overflow-hidden block max-w-full"
-      preserveAspectRatio="none"
+    <div
+      className="relative w-full"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
+      {/* Competitor-only tooltip (no parity — Parity lives on the other tab) */}
+      {isHovered && (
+        <div className="absolute bottom-full left-1/2 z-[100] -mb-2 -translate-x-1/2 pointer-events-none">
+          <div className="rounded-lg bg-[#1a1d2e] px-3 py-2 text-[10px] whitespace-nowrap text-white shadow-xl">
+            <div className="mb-1.5 border-b border-gray-700 pb-1.5 font-semibold">
+              {date.day}, {date.date} {date.month}
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-gray-400">My Rate:</span>
+                <span className="font-semibold text-[#60a5fa]">€{myRate}</span>
+              </div>
+              <div className="my-1.5 h-px bg-gray-700" />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-gray-400">Max (Comp):</span>
+                <span className="text-green-400">€{maxRate}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-gray-400">Min (Comp):</span>
+                <span className="text-red-400">€{minRate}</span>
+              </div>
+            </div>
+            <div className="absolute left-1/2 top-full -mt-px -translate-x-1/2">
+              <div className="h-0 w-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-[#1a1d2e]" />
+            </div>
+          </div>
+        </div>
+      )}
+      <svg
+        width="100%"
+        height={chartHeight}
+        className="block max-w-full overflow-hidden"
+        preserveAspectRatio="none"
+      >
         {/* Vertical range line from min to max */}
         <line
           x1="50%"
@@ -941,5 +978,6 @@ function ChartCell({
           strokeWidth="2"
         />
       </svg>
+    </div>
   );
 }
