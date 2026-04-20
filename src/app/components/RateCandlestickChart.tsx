@@ -288,6 +288,17 @@ function ChartColumn({
                 <span className="text-gray-400">Min (Comp):</span>
                 <span className="text-red-400">€{data.min}</span>
               </div>
+              <div className="h-px bg-gray-700 my-1.5"></div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-gray-400">Parity Score:</span>
+                <span className="text-white font-semibold">{data.parity.score}%</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-gray-400">Parity Status:</span>
+                <span className="font-semibold" style={{ color: data.parity.color }}>
+                  {data.parity.type}
+                </span>
+              </div>
             </div>
             <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
               <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-[#1a1d2e]"></div>
