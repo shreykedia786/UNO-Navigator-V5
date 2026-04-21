@@ -30,24 +30,24 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: 'find-it',
-    title: 'Open a rate plan',
-    description: 'Click the chevron beside a plan name.',
-    targetSelector: '[data-tour="rate-plan-chevron"]',
+    title: 'Open a room type',
+    description: 'Expand a room to see rates and the room-level competitor chart (cheapest rate plan per day).',
+    targetSelector: '[data-tour="room-chevron"]',
     position: 'right',
     highlightPadding: 8
   },
   {
     id: 'competitor-graph',
-    title: 'Competitor Rate Analysis at a Glance',
-    description: 'Each column shows min–max competitor pricing and where your rate sits for that day.',
+    title: 'Competitor spread at room level',
+    description: 'Each column uses competitors’ cheapest rate plan for that room; your blue line is your cheapest rate that day. Hover for rate plan and channel.',
     targetSelector: '[data-tour="rate-chart"]',
     position: 'right',
     highlightPadding: 8
   },
   {
     id: 'parity-colors',
-    title: 'Parity Status Indicators',
-    description: 'Background colors show how your rates compare with OTA channels.',
+    title: 'Parity',
+    description: 'Column tint reflects how your cheapest rate compares to the competitor spread (not rate-plan parity).',
     targetSelector: '[data-tour="rate-chart"]',
     position: 'right',
     highlightPadding: 8
@@ -486,7 +486,7 @@ export function OnboardingTour({ onComplete, onStepChange }: OnboardingTourProps
               </p>
               <div className="rounded-xl border border-slate-200/90 bg-white p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
                 <div className="grid grid-cols-3 gap-1.5">
-                  <div className="rounded-lg border border-emerald-200/90 bg-emerald-50/90 px-1.5 py-2 text-center">
+                  <div className="rounded-lg border border-red-200/90 bg-red-50/90 px-1.5 py-2 text-center">
                     <LegendIconMax className="mx-auto h-10 w-8" />
                     <p className="mt-1.5 text-[11px] font-bold text-gray-900">Max</p>
                     <p className="mt-0.5 text-[9px] leading-tight text-gray-600">OTA high</p>
@@ -496,14 +496,15 @@ export function OnboardingTour({ onComplete, onStepChange }: OnboardingTourProps
                     <p className="mt-1.5 text-[11px] font-bold text-gray-900">Yours</p>
                     <p className="mt-0.5 text-[9px] leading-tight text-gray-600">On spine</p>
                   </div>
-                  <div className="rounded-lg border border-red-200/90 bg-red-50/90 px-1.5 py-2 text-center">
+                  <div className="rounded-lg border border-emerald-200/90 bg-emerald-50/90 px-1.5 py-2 text-center">
                     <LegendIconMin className="mx-auto h-10 w-8" />
                     <p className="mt-1.5 text-[11px] font-bold text-gray-900">Min</p>
                     <p className="mt-0.5 text-[9px] leading-tight text-gray-600">OTA low</p>
                   </div>
                 </div>
                 <p className="mt-2 text-[10px] leading-snug text-gray-600 border-t border-slate-100 pt-2">
-                  Same as the chart: vertical range line, green/red caps, blue dot with horizontal ties across dates.
+                  Same as the chart: vertical range line, min in green and max in red, blue dot with horizontal ties
+                  across dates.
                 </p>
               </div>
             </div>

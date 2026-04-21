@@ -5,8 +5,8 @@ export function LegendIconMax({ className = 'h-[22px] w-[18px] shrink-0' }: { cl
   return (
     <svg viewBox="0 0 28 36" className={className} aria-hidden>
       <line x1="14" y1="10" x2="14" y2="30" stroke="#90a4ae" strokeWidth="2" strokeLinecap="round" />
-      <line x1="7" y1="10" x2="21" y2="10" stroke="#4caf50" strokeWidth="3.4" strokeLinecap="round" />
-      <circle cx="14" cy="10" r="2.8" fill="#4caf50" stroke="#fff" strokeWidth="1.2" />
+      <line x1="7" y1="10" x2="21" y2="10" stroke="#f44336" strokeWidth="3.4" strokeLinecap="round" />
+      <circle cx="14" cy="10" r="2.8" fill="#f44336" stroke="#fff" strokeWidth="1.2" />
     </svg>
   );
 }
@@ -26,8 +26,8 @@ export function LegendIconMin({ className = 'h-[22px] w-[18px] shrink-0' }: { cl
   return (
     <svg viewBox="0 0 28 36" className={className} aria-hidden>
       <line x1="14" y1="8" x2="14" y2="28" stroke="#90a4ae" strokeWidth="2" strokeLinecap="round" />
-      <line x1="7" y1="28" x2="21" y2="28" stroke="#f44336" strokeWidth="3.4" strokeLinecap="round" />
-      <circle cx="14" cy="28" r="2.8" fill="#f44336" stroke="#fff" strokeWidth="1.2" />
+      <line x1="7" y1="28" x2="21" y2="28" stroke="#4caf50" strokeWidth="3.4" strokeLinecap="round" />
+      <circle cx="14" cy="28" r="2.8" fill="#4caf50" stroke="#fff" strokeWidth="1.2" />
     </svg>
   );
 }

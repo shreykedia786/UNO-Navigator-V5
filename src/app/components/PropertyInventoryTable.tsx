@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, ChevronLeft, Lock, Zap } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { ChevronRight, ChevronLeft, Lock, Zap } from 'lucide-react';
 import svgPaths from "../../imports/svg-eqrmta6hqq";
-import { RateCandlestickChart } from './RateCandlestickChart';
+import { RateCandlestickChart, type RoomLevelCompetitorRates } from './RateCandlestickChart';
 
 interface DateCell {
   day: string;
@@ -12,6 +12,71 @@ interface DateCell {
 /** Initial Suite rates — competitor analysis stays fixed to these baselines when rates are edited. */
 const SUITE_GDS_BASELINE: number[] = [425, 430, 428, 435, 440, 438, 445, 450, 448, 455, 460, 458, 465, 470];
 const SUITE_BAR_BASELINE: number[] = [445, 450, 448, 455, 460, 458, 465, 470, 468, 475, 480, 478, 485, 490];
+
+const SUITE_ROOM_COMPETITOR_BASELINE = SUITE_GDS_BASELINE.map((g, i) => Math.min(g, SUITE_BAR_BASELINE[i]));
+
+const STANDARD_CLUB_RATES = [315, 315, 315, 315, 315, 315, 315, 315, 315, 350, 350, 350, 350, 350];
+const STANDARD_BAR_RATES = [320, 345, 310, 335, 340, 330, 325, 355, 315, 340, 345, 330, 325, 335];
+/** Additional Standard Room plans — realistic industry-style names (14 nights). */
+const STANDARD_ADVANCE_RATES = [299, 301, 302, 298, 304, 300, 296, 308, 294, 312, 315, 308, 305, 301];
+const STANDARD_MOBILE_RATES = [302, 299, 305, 301, 306, 303, 299, 310, 298, 315, 318, 312, 308, 304];
+const STANDARD_MEMBER_RATES = [305, 304, 308, 303, 310, 306, 302, 315, 300, 318, 322, 315, 310, 308];
+const STANDARD_CORPORATE_RATES = [328, 330, 322, 325, 332, 326, 320, 338, 318, 342, 345, 335, 330, 332];
+const STANDARD_BNB_RATES = [348, 350, 352, 345, 358, 352, 348, 362, 340, 365, 368, 358, 355, 352];
+
+const STANDARD_SYSTEM_CHEAPEST = buildCheapestAcrossPlans([
+  { rates: STANDARD_ADVANCE_RATES, ratePlanName: 'Advance Purchase (Non-Refundable)', channel: 'Brand.com' },
+  { rates: STANDARD_MOBILE_RATES, ratePlanName: 'Mobile App Exclusive', channel: 'Brand.com app' },
+  { rates: STANDARD_MEMBER_RATES, ratePlanName: 'Member Exclusive Rate', channel: 'Brand.com' },
+  { rates: STANDARD_CLUB_RATES, ratePlanName: 'Club Only Special Rates', channel: 'GDS / Brand.com' },
+  { rates: STANDARD_BAR_RATES, ratePlanName: 'Best Available Rate (BAR)', channel: 'Brand.com' },
+  { rates: STANDARD_CORPORATE_RATES, ratePlanName: 'Corporate Negotiated BAR', channel: 'GDS' },
+  { rates: STANDARD_BNB_RATES, ratePlanName: 'Bed & Breakfast Package', channel: 'Brand.com' }
+]);
+
+const DELUXE_CLUB_RATES = [355, 358, 360, 362, 365, 368, 370, 372, 375, 378, 380, 382, 385, 388];
+const DELUXE_BAR_RATES = [375, 378, 380, 382, 385, 388, 390, 392, 395, 398, 400, 402, 405, 408];
+
+const COMP_MIN_PLANS = ['BAR', 'Advance Purchase', 'Member rate', 'Non-refundable', 'Breakfast incl.'];
+const COMP_MAX_PLANS = ['Flexible BAR', 'Corporate BAR', 'Package + breakfast', 'Suite upgrade', 'Advance saver'];
+const COMP_CHANNELS = ['Booking.com', 'Expedia', 'Agoda', 'Hotels.com', 'Priceline', 'Google Hotel Ads', 'Kayak'];
+
+function buildCheapestAcrossPlans(
+  plans: Array<{ rates: number[]; ratePlanName: string; channel: string }>
+): { rates: number[]; meta: Array<{ ratePlan: string; channel: string }> } {
+  const len = plans[0].rates.length;
+  const rates: number[] = [];
+  const meta: Array<{ ratePlan: string; channel: string }> = [];
+  for (let i = 0; i < len; i++) {
+    let best = { v: Infinity, ratePlan: '', channel: '' };
+    for (const p of plans) {
+      const v = p.rates[i];
+      if (v < best.v) best = { v, ratePlan: p.ratePlanName, channel: p.channel };
+    }
+    rates.push(best.v);
+    meta.push({ ratePlan: best.ratePlan, channel: best.channel });
+  }
+  return { rates, meta };
+}
+
+const DELUXE_ROOM_CHEAPEST = buildCheapestAcrossPlans([
+  { rates: DELUXE_CLUB_RATES, ratePlanName: 'Deluxe Club Special Rates', channel: 'GDS / Brand.com' },
+  { rates: DELUXE_BAR_RATES, ratePlanName: 'BAR', channel: 'Brand.com' }
+]);
+
+const DRAWER_INCLUSIONS_STANDARD = [
+  'Advance Purchase (Non-Refundable)',
+  'Member Exclusive Rate',
+  'Mobile App Exclusive',
+  'Corporate Negotiated BAR',
+  'Bed & Breakfast Package',
+  'Club Only Special Rates',
+  'Best Available Rate (BAR)'
+];
+
+const DRAWER_INCLUSIONS_SUITE = ['GDS Only Special Rates', 'Best Available Rate (BAR)'];
+
+const DRAWER_INCLUSIONS_DELUXE = ['Deluxe Club Special Rates', 'Best Available Rate (BAR)'];
 
 function parseSuiteRateInput(raw: string): number {
   const digits = raw.replace(/\D/g, '');
@@ -26,9 +91,6 @@ export function PropertyInventoryTable() {
   const [isSuiteExpanded, setIsSuiteExpanded] = useState(false);
   const [isDeluxeRoomExpanded, setIsDeluxeRoomExpanded] = useState(false);
   
-  // Track expanded rate plans
-  const [expandedRatePlans, setExpandedRatePlans] = useState<Set<string>>(new Set());
-
   const [suiteGdsRates, setSuiteGdsRates] = useState<number[]>(() => [...SUITE_GDS_BASELINE]);
   const [suiteBarRates, setSuiteBarRates] = useState<number[]>(() => [...SUITE_BAR_BASELINE]);
   /** Indices where user committed a change (blur/Enter) that differs from baseline — orange highlight */
@@ -95,6 +157,14 @@ export function PropertyInventoryTable() {
     syncSuiteBarEditedFlag(index, value);
   };
 
+  /** Drawer edits the row that currently drives the room-level cheapest rate for that date. */
+  const updateSuiteCheapestFromDrawer = (index: number, value: string) => {
+    const g = suiteGdsRates[index];
+    const b = suiteBarRates[index];
+    if (g <= b) updateSuiteGdsRateFromDrawer(index, value);
+    else updateSuiteBarRateFromDrawer(index, value);
+  };
+
   // Listen for onboarding event to expand Standard Room
   useEffect(() => {
     const handleExpandStandardRoom = () => {
@@ -108,31 +178,25 @@ export function PropertyInventoryTable() {
     };
   }, []);
 
-  // Listen for onboarding event to expand first rate plan
-  useEffect(() => {
-    const handleExpandFirstRatePlan = () => {
-      setExpandedRatePlans(new Set(['std-club-special']));
-    };
-
-    window.addEventListener('onboarding-expand-first-rate-plan', handleExpandFirstRatePlan);
-
-    return () => {
-      window.removeEventListener('onboarding-expand-first-rate-plan', handleExpandFirstRatePlan);
-    };
-  }, []);
-
-  const toggleRatePlan = (ratePlanId: string) => {
-    const newExpanded = new Set(expandedRatePlans);
-    if (newExpanded.has(ratePlanId)) {
-      newExpanded.delete(ratePlanId);
-    } else {
-      newExpanded.add(ratePlanId);
+  const suiteRoomCheapest = useMemo(() => {
+    const rates: number[] = [];
+    const meta: Array<{ ratePlan: string; channel: string }> = [];
+    for (let i = 0; i < suiteGdsRates.length; i++) {
+      const g = suiteGdsRates[i];
+      const b = suiteBarRates[i];
+      if (g <= b) {
+        rates.push(g);
+        meta.push({ ratePlan: 'GDS Only Special Rates', channel: 'GDS' });
+      } else {
+        rates.push(b);
+        meta.push({ ratePlan: 'BAR', channel: 'Brand.com' });
+      }
     }
-    setExpandedRatePlans(newExpanded);
-  };
-  
-  // Generate competitor rate data (min, avg, max) for analysis
-  const getCompetitorRatesForDate = (dateIndex: number, baseRate: number) => {
+    return { rates, meta };
+  }, [suiteGdsRates, suiteBarRates]);
+
+  // Generate competitor rate data (min, avg, max) + demo rate plan / channel labels for room-level tooltips
+  const getCompetitorRatesForDate = (dateIndex: number, baseRate: number): RoomLevelCompetitorRates => {
     // Create varied scenarios - some rates will be above max, below min, and in between
     const scenarios = [
       // Scenario 1: Rate within range
@@ -172,8 +236,17 @@ export function PropertyInventoryTable() {
     const min = Math.round(baseRate * (1 + scenario.minVariance));
     const max = Math.round(baseRate * (1 + scenario.maxVariance));
     const avg = Math.round(baseRate * (1 + scenario.avgOffset));
-    
-    return { min, avg, max };
+
+    const h = dateIndex * 47 + (Math.round(baseRate) % 17);
+    return {
+      min,
+      avg,
+      max,
+      competitorMinRatePlan: COMP_MIN_PLANS[h % COMP_MIN_PLANS.length],
+      competitorMinChannel: COMP_CHANNELS[(h + 2) % COMP_CHANNELS.length],
+      competitorMaxRatePlan: COMP_MAX_PLANS[(h + 5) % COMP_MAX_PLANS.length],
+      competitorMaxChannel: COMP_CHANNELS[(h + 1) % COMP_CHANNELS.length]
+    };
   };
 
   const dates: DateCell[] = [
@@ -469,92 +542,108 @@ export function PropertyInventoryTable() {
 
                 {isStandardRoomExpanded && (
                   <>
+                    <RateCandlestickChart
+                      dates={dates}
+                      rates={STANDARD_SYSTEM_CHEAPEST.rates}
+                      myRateMeta={STANDARD_SYSTEM_CHEAPEST.meta}
+                      getCompetitorRates={getCompetitorRatesForDate}
+                      showLegend={true}
+                      roomType="Standard Room"
+                      drawerInclusionPlanNames={DRAWER_INCLUSIONS_STANDARD}
+                      ratePlan="Room aggregate (cheapest rate plan per day)"
+                      events={events}
+                    />
+
                     {/* Club Only Special Rates */}
                     <tr className="border-b border-[#e0e0e0]">
                       <td className="px-4 py-2.5 bg-white border-r-0">
-                        <button
-                          onClick={() => toggleRatePlan('std-club-special')}
-                          className="pl-4 flex items-center gap-2 w-full text-left hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors"
-                        >
-                          <div data-tour="rate-plan-chevron">
-                            {expandedRatePlans.has('std-club-special') ? (
-                              <ChevronDown className="w-3 h-3 text-[#2753eb] flex-shrink-0" />
-                            ) : (
-                              <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                            )}
+                        <div className="pl-4 pr-2 py-1">
+                          <div className="text-[11px] font-medium text-[#333333]">
+                            Club Only Special Rates With Breakfast And Complementary...
                           </div>
-                          <div>
-                            <div className="text-[11px] font-medium text-[#333333]">Club Only Special Rates With Breakfast And Complementary...</div>
-                            <div className="text-[10px] font-medium italic text-[#999999]">GDSR</div>
-                          </div>
-                        </button>
+                          <div className="text-[10px] font-medium italic text-[#999999]">GDSR</div>
+                        </div>
                       </td>
                       <td className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
-                        <span className="text-[10px] font-normal text-[#666666]">Rates(EUR)</span>
+                        <span className="text-[10px] font-normal text-[#666666]">Rates (EUR)</span>
                       </td>
                       <td className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
-                        <span className="text-[12px] font-normal text-[#333333]">315</span>
+                        <span className="text-[12px] font-normal text-[#333333]">{STANDARD_CLUB_RATES[0]}</span>
                       </td>
-                      {[315, 315, 315, 315, 315, 315, 315, 315, 315, 350, 350, 350, 350].map((rate, idx) => (
+                      {STANDARD_CLUB_RATES.slice(1).map((rate, idx) => (
                         <td key={idx} className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
                           <span className="text-[12px] font-normal text-[#333333]">{rate}</span>
                         </td>
                       ))}
                     </tr>
-
-                    {/* Candlestick Chart for Club Only Special Rates */}
-                    {expandedRatePlans.has('std-club-special') && (
-                      <RateCandlestickChart 
-                        dates={dates}
-                        rates={[315, 315, 315, 315, 315, 315, 315, 315, 315, 350, 350, 350, 350, 350]} 
-                        getCompetitorRates={getCompetitorRatesForDate}
-                        showLegend={true}
-                        roomType="Standard Room"
-                        ratePlan="Club Only Special Rates"
-                        events={events}
-                      />
-                    )}
 
                     {/* BAR */}
                     <tr className="border-b border-[#e0e0e0]">
                       <td className="px-4 py-2.5 bg-white border-r-0">
-                        <button
-                          onClick={() => toggleRatePlan('std-bar')}
-                          className="pl-4 flex items-center gap-2 w-full text-left hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors"
-                        >
-                          {expandedRatePlans.has('std-bar') ? (
-                            <ChevronDown className="w-3 h-3 text-[#2753eb] flex-shrink-0" />
-                          ) : (
-                            <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                          )}
-                          <div>
-                            <div className="text-[11px] font-semibold text-[#333333]">BAR</div>
-                            <div className="text-[10px] font-medium italic text-[#999999]">BAR</div>
-                          </div>
-                        </button>
+                        <div className="pl-4 pr-2 py-1">
+                          <div className="text-[11px] font-semibold text-[#333333]">BAR</div>
+                          <div className="text-[10px] font-medium italic text-[#999999]">BAR</div>
+                        </div>
                       </td>
                       <td className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
-                        <span className="text-[10px] font-normal text-[#666666]">Rates(EUR)</span>
+                        <span className="text-[10px] font-normal text-[#666666]">Rates (EUR)</span>
                       </td>
-                      {[320, 345, 310, 335, 340, 330, 325, 355, 315, 340, 345, 330, 325, 335].map((rate, idx) => (
+                      {STANDARD_BAR_RATES.map((rate, idx) => (
                         <td key={idx} className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
                           <span className="text-[12px] font-normal text-[#333333]">{rate}</span>
                         </td>
                       ))}
                     </tr>
 
-                    {/* Candlestick Chart for BAR */}
-                    {expandedRatePlans.has('std-bar') && (
-                      <RateCandlestickChart 
-                        dates={dates}
-                        rates={[320, 345, 310, 335, 340, 330, 325, 355, 315, 340, 345, 330, 325, 335]} 
-                        getCompetitorRates={getCompetitorRatesForDate}
-                        showLegend={true}
-                        roomType="Standard Room"
-                        ratePlan="BAR"
-                        events={events}
-                      />
-                    )}
+                    {[
+                      {
+                        id: 'std-advance',
+                        title: 'Advance Purchase (Non-Refundable)',
+                        code: 'ADV-NR',
+                        rates: STANDARD_ADVANCE_RATES
+                      },
+                      {
+                        id: 'std-member',
+                        title: 'Member Exclusive Rate',
+                        code: 'MEM',
+                        rates: STANDARD_MEMBER_RATES
+                      },
+                      {
+                        id: 'std-mobile',
+                        title: 'Mobile App Exclusive',
+                        code: 'MOB',
+                        rates: STANDARD_MOBILE_RATES
+                      },
+                      {
+                        id: 'std-corporate',
+                        title: 'Corporate Negotiated BAR',
+                        code: 'CORP',
+                        rates: STANDARD_CORPORATE_RATES
+                      },
+                      {
+                        id: 'std-bnb',
+                        title: 'Bed & Breakfast Package',
+                        code: 'BBPKG',
+                        rates: STANDARD_BNB_RATES
+                      }
+                    ].map((plan) => (
+                      <tr key={plan.id} className="border-b border-[#e0e0e0]">
+                        <td className="px-4 py-2.5 bg-white border-r-0">
+                          <div className="pl-4 pr-2 py-1">
+                            <div className="text-[11px] font-medium text-[#333333]">{plan.title}</div>
+                            <div className="text-[10px] font-medium italic text-[#999999]">{plan.code}</div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
+                          <span className="text-[10px] font-normal text-[#666666]">Rates (EUR)</span>
+                        </td>
+                        {plan.rates.map((rate, idx) => (
+                          <td key={idx} className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
+                            <span className="text-[12px] font-normal text-[#333333]">{rate}</span>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
                   </>
                 )}
               </tbody>
@@ -606,26 +695,32 @@ export function PropertyInventoryTable() {
 
                 {isSuiteExpanded && (
                   <>
+                    <RateCandlestickChart
+                      dates={dates}
+                      rates={suiteRoomCheapest.rates}
+                      myRateMeta={suiteRoomCheapest.meta}
+                      getCompetitorRates={getCompetitorRatesForDate}
+                      competitorBaseRates={SUITE_ROOM_COMPETITOR_BASELINE}
+                      onYourRatesChange={updateSuiteCheapestFromDrawer}
+                      showLegend={true}
+                      roomType="Suite"
+                      drawerInclusionPlanNames={DRAWER_INCLUSIONS_SUITE}
+                      ratePlan="Room aggregate (cheapest rate plan per day)"
+                      events={events}
+                    />
+
                     {/* GDS Only Special Rates */}
                     <tr className="border-b border-[#e0e0e0]">
                       <td className="px-4 py-2.5 bg-white border-r-0">
-                        <button
-                          onClick={() => toggleRatePlan('suite-gds-special')}
-                          className="pl-4 flex items-center gap-2 w-full text-left hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors"
-                        >
-                          {expandedRatePlans.has('suite-gds-special') ? (
-                            <ChevronDown className="w-3 h-3 text-[#2753eb] flex-shrink-0" />
-                          ) : (
-                            <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                          )}
-                          <div>
-                            <div className="text-[11px] font-medium text-[#333333]">GDS Only Special Rates With Breakfast And Complementary...</div>
-                            <div className="text-[10px] font-medium italic text-[#999999]">GDSN</div>
+                        <div className="pl-4 pr-2 py-1">
+                          <div className="text-[11px] font-medium text-[#333333]">
+                            GDS Only Special Rates With Breakfast And Complementary...
                           </div>
-                        </button>
+                          <div className="text-[10px] font-medium italic text-[#999999]">GDSN</div>
+                        </div>
                       </td>
                       <td className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
-                        <span className="text-[10px] font-normal text-[#666666]">Rates(EUR)</span>
+                        <span className="text-[10px] font-normal text-[#666666]">Rates (EUR)</span>
                       </td>
                       {suiteGdsRates.map((rate, idx) => {
                         const isEdited = suiteGdsEditedCells.has(idx);
@@ -659,40 +754,16 @@ export function PropertyInventoryTable() {
                       })}
                     </tr>
 
-                    {expandedRatePlans.has('suite-gds-special') && (
-                      <RateCandlestickChart
-                        dates={dates}
-                        rates={suiteGdsRates}
-                        competitorBaseRates={SUITE_GDS_BASELINE}
-                        onYourRatesChange={updateSuiteGdsRateFromDrawer}
-                        getCompetitorRates={getCompetitorRatesForDate}
-                        showLegend={true}
-                        roomType="Suite"
-                        ratePlan="GDS Only Special Rates"
-                        events={events}
-                      />
-                    )}
-
                     {/* BAR under Suite */}
                     <tr className="border-b border-[#e0e0e0]">
                       <td className="px-4 py-2.5 bg-white border-r-0">
-                        <button
-                          onClick={() => toggleRatePlan('suite-bar')}
-                          className="pl-4 flex items-center gap-2 w-full text-left hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors"
-                        >
-                          {expandedRatePlans.has('suite-bar') ? (
-                            <ChevronDown className="w-3 h-3 text-[#2753eb] flex-shrink-0" />
-                          ) : (
-                            <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                          )}
-                          <div>
-                            <div className="text-[11px] font-semibold text-[#333333]">BAR</div>
-                            <div className="text-[10px] font-medium italic text-[#999999]">BAR</div>
-                          </div>
-                        </button>
+                        <div className="pl-4 pr-2 py-1">
+                          <div className="text-[11px] font-semibold text-[#333333]">BAR</div>
+                          <div className="text-[10px] font-medium italic text-[#999999]">BAR</div>
+                        </div>
                       </td>
                       <td className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
-                        <span className="text-[10px] font-normal text-[#666666]">Rates(EUR)</span>
+                        <span className="text-[10px] font-normal text-[#666666]">Rates (EUR)</span>
                       </td>
                       {suiteBarRates.map((rate, idx) => {
                         const isEdited = suiteBarEditedCells.has(idx);
@@ -723,19 +794,6 @@ export function PropertyInventoryTable() {
                       })}
                     </tr>
 
-                    {expandedRatePlans.has('suite-bar') && (
-                      <RateCandlestickChart
-                        dates={dates}
-                        rates={suiteBarRates}
-                        competitorBaseRates={SUITE_BAR_BASELINE}
-                        onYourRatesChange={updateSuiteBarRateFromDrawer}
-                        getCompetitorRates={getCompetitorRatesForDate}
-                        showLegend={true}
-                        roomType="Suite"
-                        ratePlan="BAR"
-                        events={events}
-                      />
-                    )}
                   </>
                 )}
               </tbody>
@@ -788,88 +846,58 @@ export function PropertyInventoryTable() {
 
                 {isDeluxeRoomExpanded && (
                   <>
+                    <RateCandlestickChart
+                      dates={dates}
+                      rates={DELUXE_ROOM_CHEAPEST.rates}
+                      myRateMeta={DELUXE_ROOM_CHEAPEST.meta}
+                      getCompetitorRates={getCompetitorRatesForDate}
+                      showLegend={true}
+                      roomType="Deluxe Room"
+                      drawerInclusionPlanNames={DRAWER_INCLUSIONS_DELUXE}
+                      ratePlan="Room aggregate (cheapest rate plan per day)"
+                      events={events}
+                    />
+
                     {/* Deluxe special rates */}
                     <tr className="border-b border-[#e0e0e0]">
                       <td className="px-4 py-2.5 bg-white border-r-0">
-                        <button
-                          onClick={() => toggleRatePlan('deluxe-club-special')}
-                          className="pl-4 flex items-center gap-2 w-full text-left hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors"
-                        >
-                          {expandedRatePlans.has('deluxe-club-special') ? (
-                            <ChevronDown className="w-3 h-3 text-[#2753eb] flex-shrink-0" />
-                          ) : (
-                            <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                          )}
-                          <div>
-                            <div className="text-[11px] font-medium text-[#333333]">Deluxe Club Special Rates With Breakfast And Complementary...</div>
-                            <div className="text-[10px] font-medium italic text-[#999999]">DLXR</div>
+                        <div className="pl-4 pr-2 py-1">
+                          <div className="text-[11px] font-medium text-[#333333]">
+                            Deluxe Club Special Rates With Breakfast And Complementary...
                           </div>
-                        </button>
+                          <div className="text-[10px] font-medium italic text-[#999999]">DLXR</div>
+                        </div>
                       </td>
                       <td className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
-                        <span className="text-[10px] font-normal text-[#666666]">Rates(EUR)</span>
+                        <span className="text-[10px] font-normal text-[#666666]">Rates (EUR)</span>
                       </td>
                       <td className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
-                        <span className="text-[12px] font-normal text-[#333333]">355</span>
+                        <span className="text-[12px] font-normal text-[#333333]">{DELUXE_CLUB_RATES[0]}</span>
                       </td>
-                      {[358, 360, 362, 365, 368, 370, 372, 375, 378, 380, 382, 385, 388].map((rate, idx) => (
+                      {DELUXE_CLUB_RATES.slice(1).map((rate, idx) => (
                         <td key={idx} className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
                           <span className="text-[12px] font-normal text-[#333333]">{rate}</span>
                         </td>
                       ))}
                     </tr>
-
-                    {expandedRatePlans.has('deluxe-club-special') && (
-                      <RateCandlestickChart
-                        dates={dates}
-                        rates={[355, 358, 360, 362, 365, 368, 370, 372, 375, 378, 380, 382, 385, 388]}
-                        getCompetitorRates={getCompetitorRatesForDate}
-                        showLegend={true}
-                        roomType="Deluxe Room"
-                        ratePlan="Deluxe Club Special Rates"
-                        events={events}
-                      />
-                    )}
 
                     {/* BAR — Deluxe */}
                     <tr className="border-b border-[#e0e0e0]">
                       <td className="px-4 py-2.5 bg-white border-r-0">
-                        <button
-                          onClick={() => toggleRatePlan('deluxe-bar')}
-                          className="pl-4 flex items-center gap-2 w-full text-left hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors"
-                        >
-                          {expandedRatePlans.has('deluxe-bar') ? (
-                            <ChevronDown className="w-3 h-3 text-[#2753eb] flex-shrink-0" />
-                          ) : (
-                            <ChevronRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                          )}
-                          <div>
-                            <div className="text-[11px] font-semibold text-[#333333]">BAR</div>
-                            <div className="text-[10px] font-medium italic text-[#999999]">BAR</div>
-                          </div>
-                        </button>
+                        <div className="pl-4 pr-2 py-1">
+                          <div className="text-[11px] font-semibold text-[#333333]">BAR</div>
+                          <div className="text-[10px] font-medium italic text-[#999999]">BAR</div>
+                        </div>
                       </td>
                       <td className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
-                        <span className="text-[10px] font-normal text-[#666666]">Rates(EUR)</span>
+                        <span className="text-[10px] font-normal text-[#666666]">Rates (EUR)</span>
                       </td>
-                      {[375, 378, 380, 382, 385, 388, 390, 392, 395, 398, 400, 402, 405, 408].map((rate, idx) => (
+                      {DELUXE_BAR_RATES.map((rate, idx) => (
                         <td key={idx} className="px-3 py-2.5 text-center border-r border-[#e0e0e0] bg-white">
                           <span className="text-[12px] font-normal text-[#333333]">{rate}</span>
                         </td>
                       ))}
                     </tr>
-
-                    {expandedRatePlans.has('deluxe-bar') && (
-                      <RateCandlestickChart
-                        dates={dates}
-                        rates={[375, 378, 380, 382, 385, 388, 390, 392, 395, 398, 400, 402, 405, 408]}
-                        getCompetitorRates={getCompetitorRatesForDate}
-                        showLegend={true}
-                        roomType="Deluxe Room"
-                        ratePlan="BAR"
-                        events={events}
-                      />
-                    )}
                   </>
                 )}
               </tbody>

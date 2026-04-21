@@ -29,13 +29,9 @@ export default function App() {
   };
 
   const handleTourStepChange = (stepIndex: number) => {
-    // When reaching step 1, expand the Standard Room so the rate plan chevron is visible
+    // When reaching step 1, expand the Standard Room so the room-level chart is visible
     if (stepIndex === 1) {
       window.dispatchEvent(new CustomEvent('onboarding-expand-standard-room'));
-    }
-    // When reaching step 2, expand the first rate plan to show competitor analysis
-    if (stepIndex === 2) {
-      window.dispatchEvent(new CustomEvent('onboarding-expand-first-rate-plan'));
     }
   };
 

@@ -1,17 +1,39 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Info } from 'lucide-react';
 import { LegendIconMax, LegendIconMin, LegendIconMyRate } from './CompetitorChartLegendIcons';
 import { DetailedCompetitorModal } from './DetailedCompetitorModal';
+
+/** Matches onboarding UI blue (`OnboardingTour`: `#2753eb` icons / gradient). Prepends `brightness(0)` for raster logos. */
+const NAVIGATOR_LOGO_BRAND_FILTER =
+  'brightness(0) saturate(100%) invert(29%) sepia(90%) saturate(6194%) hue-rotate(225deg) brightness(98%) contrast(101%)';
+
+/** Room-level view: min/max across competitors (each at their cheapest rate plan for the room). */
+export type RoomLevelCompetitorRates = {
+  min: number;
+  avg: number;
+  max: number;
+  /** Competitor offer that sits at the market minimum (demo / future API). */
+  competitorMinRatePlan: string;
+  competitorMinChannel: string;
+  competitorMaxRatePlan: string;
+  competitorMaxChannel: string;
+};
 
 interface CandlestickChartProps {
   dates: Array<{ day: string; date: string; month: string }>;
   rates: number[];
-  getCompetitorRates: (dateIndex: number, baseRate: number) => { min: number; avg: number; max: number };
+  getCompetitorRates: (dateIndex: number, baseRate: number) => RoomLevelCompetitorRates;
+  /** Per-day: which rate plan drives your cheapest grid rate, and channel. */
+  myRateMeta?: Array<{ ratePlan: string; channel: string }>;
   /** When set, competitor min/max/avg use this baseline per date; `rates` only drives My Rate (blue line). */
   competitorBaseRates?: number[];
   /** When set, the View Details drawer allows editing Your Rates (Suite). Updates parent state so the main grid stays in sync. */
   onYourRatesChange?: (dateIndex: number, value: string) => void;
   showLegend?: boolean;
   roomType?: string;
+  /** Shown in View Details drawer filters (inclusion = rate plan names after "Any"). */
+  drawerInclusionPlanNames?: string[];
   ratePlan?: string;
   events?: Array<{
     name: string;
@@ -28,46 +50,51 @@ export function RateCandlestickChart({
   dates,
   rates,
   getCompetitorRates,
+  myRateMeta,
   competitorBaseRates,
   onYourRatesChange,
   showLegend = true,
   roomType,
+  drawerInclusionPlanNames,
   ratePlan,
   events
 }: CandlestickChartProps) {
   const [showDetailedView, setShowDetailedView] = useState(false);
 
-  // Generate random parity data for each date
-  const getParityData = (idx: number) => {
-    const parityTypes = ['Win', 'Meet', 'Loss'];
-    const parityColors = {
-      Win: '#f97316',
-      Meet: '#22c55e',
-      Loss: '#ef4444'
-    };
-
-    // Use index to create consistent but varied results
-    const seed = idx * 17 + 13; // Some variation
-    const typeIndex = seed % 3;
-    const parityType = parityTypes[typeIndex];
-
-    // Generate parity score between 60-95%
-    const parityScore = 60 + (seed % 36);
-
-    return {
-      type: parityType as 'Win' | 'Meet' | 'Loss',
-      score: parityScore,
-      color: parityColors[parityType as keyof typeof parityColors]
-    };
+  /** Room-level parity: your cheapest rate vs competitor mid (avg) of the spread. */
+  const getRoomParity = (myRate: number, compAvg: number) => {
+    const parityColors = { Win: '#f97316', Meet: '#22c55e', Loss: '#ef4444' };
+    if (!compAvg || myRate <= 0) {
+      return { type: 'Meet' as const, score: 78, color: parityColors.Meet };
+    }
+    const ratio = myRate / compAvg;
+    if (ratio < 0.97) {
+      return {
+        type: 'Win' as const,
+        score: Math.min(95, Math.round(68 + (1 - ratio) * 120)),
+        color: parityColors.Win
+      };
+    }
+    if (ratio > 1.03) {
+      return {
+        type: 'Loss' as const,
+        score: Math.min(95, Math.round(62 + (ratio - 1) * 80)),
+        color: parityColors.Loss
+      };
+    }
+    return { type: 'Meet' as const, score: 84, color: parityColors.Meet };
   };
 
   // Calculate competitor data; baseline can be decoupled from "My Rate" (e.g. Suite edits)
-  const chartData = rates.map((rate, idx) => ({
-    rate,
-    ...getCompetitorRates(idx, competitorBaseRates?.[idx] ?? rate),
-    date: dates[idx],
-    parity: getParityData(idx)
-  }));
+  const chartData = rates.map((rate, idx) => {
+    const comp = getCompetitorRates(idx, competitorBaseRates?.[idx] ?? rate);
+    return {
+      rate,
+      ...comp,
+      date: dates[idx],
+      parity: getRoomParity(rate, comp.avg)
+    };
+  });
 
   // Use fixed Y-axis range - smaller range for taller lines
   const chartMin = 200;
@@ -97,10 +124,10 @@ export function RateCandlestickChart({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <h3 className="text-[11px] font-semibold text-[#1a1a1a] leading-snug tracking-tight">
-                    Competitor Rate & Parity Analysis
+                    Competitor and Parity Analysis
                   </h3>
                   <p className="text-[10px] text-gray-500 mt-1 leading-snug">
-                    Compare your rates vs competitors and track parity status
+                    Competitor min/max (from cheapest rate plan) vs your cheapest rate; column colors indicate parity.
                   </p>
                 </div>
                 <button
@@ -116,7 +143,7 @@ export function RateCandlestickChart({
               {showLegend && (
                 <div className="mt-2 border-t border-slate-200/60 pt-2">
                   <p className="sr-only">
-                    Legend — Competitor: max, min, my rate. Parity: column background matches win, meet, or loss.
+                    Legend — Competitor: max, min, my rate. Parity: column tint (win, meet, loss) from your cheapest rate vs competitor spread. Min and max compare each competitor’s lowest rate plan for the room with your lowest daily rate.
                   </p>
                   <div
                     className="rounded-lg border border-slate-200/70 bg-white px-2.5 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
@@ -173,6 +200,22 @@ export function RateCandlestickChart({
                   </div>
                 </div>
               )}
+              <div
+                className="mt-2 flex items-center justify-end gap-0.5"
+                aria-label="Powered by Navigator"
+              >
+                <span className="shrink-0 text-[9px] font-medium leading-none text-slate-400/85">
+                  Powered by
+                </span>
+                <img
+                  src={`${import.meta.env.BASE_URL}navigator-logo.svg`}
+                  alt="Navigator"
+                  className="h-[14px] w-auto max-h-[16px] max-w-[min(150px,calc(100%-4.5rem))] shrink-0 object-contain"
+                  style={{ filter: NAVIGATOR_LOGO_BRAND_FILTER }}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
             </div>
           </div>
         </td>
@@ -192,6 +235,7 @@ export function RateCandlestickChart({
               key={idx}
               columnIndex={idx}
               data={data}
+              myRateMeta={myRateMeta?.[idx]}
               myRateY={myRateY}
               maxY={maxY}
               minY={minY}
@@ -213,6 +257,7 @@ export function RateCandlestickChart({
           rates={rates}
           chartData={chartData}
           roomType={roomType}
+          inclusionPlanNames={drawerInclusionPlanNames}
           ratePlan={ratePlan}
           events={events}
           editableYourRates={!!onYourRatesChange}
@@ -227,6 +272,7 @@ export function RateCandlestickChart({
 function ChartColumn({
   columnIndex,
   data,
+  myRateMeta,
   myRateY,
   maxY,
   minY,
@@ -242,9 +288,14 @@ function ChartColumn({
     rate: number;
     min: number;
     max: number;
+    competitorMinRatePlan: string;
+    competitorMinChannel: string;
+    competitorMaxRatePlan: string;
+    competitorMaxChannel: string;
     date: { day: string; date: string; month: string };
     parity: { type: string; score: number; color: string };
   };
+  myRateMeta?: { ratePlan: string; channel: string };
   myRateY: number;
   maxY: number;
   minY: number;
@@ -256,59 +307,216 @@ function ChartColumn({
   dataTour?: string;
 }) {
   const [isHovered, setIsHovered] = useState(false);
+  const [tooltipLayout, setTooltipLayout] = useState<{
+    left: number;
+    top: number;
+    placement: 'above' | 'below';
+  } | null>(null);
+  /** Chart wrapper — table cells stretch to row height (legend column), so anchor tooltips here not on `<td>`. */
+  const chartAnchorRef = useRef<HTMLDivElement>(null);
+  const tipRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const revealClipId = useId().replace(/:/g, '');
   const revealDelayMs = columnIndex * 42;
+
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current !== null) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const scheduleClose = () => {
+    clearCloseTimer();
+    closeTimerRef.current = setTimeout(() => {
+      setIsHovered(false);
+      closeTimerRef.current = null;
+    }, 140);
+  };
+
+  useEffect(() => () => clearCloseTimer(), []);
+
+  useLayoutEffect(() => {
+    if (!isHovered) {
+      setTooltipLayout(null);
+      return;
+    }
+
+    const updatePosition = () => {
+      const anchor = chartAnchorRef.current;
+      const tip = tipRef.current;
+      if (!anchor || !tip) return;
+
+      const r = anchor.getBoundingClientRect();
+      const tw = tip.offsetWidth;
+      const th = tip.offsetHeight;
+      /** Positive = nudge tooltip into the chart edge so it reads attached (px). */
+      const tuckTowardChartPx = 10;
+      const margin = 8;
+
+      let left = r.left + r.width / 2 - tw / 2;
+      left = Math.min(Math.max(left, margin), window.innerWidth - tw - margin);
+
+      let top = r.top - th + tuckTowardChartPx;
+      let placement: 'above' | 'below' = 'above';
+      if (top < margin) {
+        placement = 'below';
+        top = r.bottom - tuckTowardChartPx;
+        if (top + th > window.innerHeight - margin) {
+          top = Math.max(margin, window.innerHeight - th - margin);
+        }
+      }
+
+      setTooltipLayout({ left, top, placement });
+    };
+
+    updatePosition();
+    const tip = tipRef.current;
+    const ro = tip ? new ResizeObserver(updatePosition) : null;
+    if (tip && ro) ro.observe(tip);
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isHovered, columnIndex, data.rate, data.min, data.max, data.parity.score, data.parity.type, myRateMeta]);
+
+  const tooltipContent = (
+    <div
+      ref={tipRef}
+      role="tooltip"
+      className="pointer-events-auto relative w-[min(300px,calc(100vw-24px))] max-w-[calc(100vw-24px)] rounded-lg border border-white/15 bg-[#141622] px-3 py-2.5 text-left text-[11px] leading-normal text-white shadow-2xl"
+      onMouseEnter={() => {
+        clearCloseTimer();
+        setIsHovered(true);
+      }}
+      onMouseLeave={scheduleClose}
+      style={
+        tooltipLayout
+          ? {
+              position: 'fixed',
+              left: tooltipLayout.left,
+              top: tooltipLayout.top,
+              zIndex: 2147483000
+            }
+          : {
+              position: 'fixed',
+              left: -9999,
+              top: 0,
+              zIndex: 2147483000,
+              visibility: 'hidden' as const
+            }
+      }
+    >
+      {tooltipLayout?.placement === 'below' && (
+        <div className="pointer-events-none absolute bottom-full left-1/2 z-[1] mb-0 -translate-x-1/2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+          <div className="h-0 w-0 border-b-[12px] border-l-[12px] border-r-[12px] border-l-transparent border-r-transparent border-b-[#141622]" />
+        </div>
+      )}
+      <div className="mb-2 flex items-center justify-between gap-3 border-b border-white/15 pb-2">
+        <div className="min-w-0 flex-1 text-[12px] font-semibold leading-tight tracking-tight text-white">
+          {data.date.day}, {data.date.date} {data.date.month}
+        </div>
+        <div
+          className="flex shrink-0 items-stretch gap-2 rounded-lg border border-white/12 bg-black/30 py-1 pl-2 pr-2.5 shadow-inner shadow-black/20"
+          role="group"
+          title={`Room parity: ${data.parity.type} ${data.parity.score}%`}
+          aria-label={`Room parity ${data.parity.type}, ${data.parity.score} percent`}
+        >
+          <span className="flex items-center text-[9px] font-semibold uppercase leading-none tracking-[0.16em] text-slate-500">
+            Parity
+          </span>
+          <span className="w-px shrink-0 self-stretch bg-white/15" aria-hidden />
+          <div className="flex items-center gap-1 leading-none">
+            <span className="text-[11px] font-bold tabular-nums" style={{ color: data.parity.color }}>
+              {data.parity.type}
+            </span>
+            <span className="text-[10px] font-medium text-slate-500" aria-hidden>
+              ·
+            </span>
+            <span className="text-[12px] font-bold tabular-nums text-white">{data.parity.score}%</span>
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="rounded-md border border-white/15 bg-white/[0.08] px-2.5 py-2">
+          <div className="mb-1.5 text-[11px] font-semibold text-sky-300">Your rate (cheapest)</div>
+          <div className="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 text-[11px] text-slate-100">
+            <span className="shrink-0 text-slate-400">Amount</span>
+            <span className="font-semibold tabular-nums text-sky-300">€{data.rate}</span>
+            {myRateMeta && (
+              <>
+                <span className="shrink-0 text-slate-400">Plan</span>
+                <span className="break-words leading-snug text-slate-100">{myRateMeta.ratePlan}</span>
+                <span className="shrink-0 text-slate-400">Channel</span>
+                <span className="break-words leading-snug text-slate-100">{myRateMeta.channel}</span>
+              </>
+            )}
+          </div>
+          <div
+            className="mt-1.5 flex items-start gap-1.5 border-t border-white/10 pt-1.5"
+            role="note"
+            aria-label="Your rate here may differ from your UNO (ARI) rate, as it is sourced from Navigator."
+          >
+            <Info
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400"
+              strokeWidth={2.25}
+              aria-hidden
+            />
+            <p className="m-0 min-w-0 flex-1 text-[10px] font-normal leading-snug text-slate-300">
+              Your rate here may differ from your UNO (ARI) rate, as it is sourced from{' '}
+              <span className="font-semibold text-sky-300">Navigator</span>.
+            </p>
+          </div>
+        </div>
+        <div className="rounded-md border border-white/15 bg-white/[0.08] px-2.5 py-2">
+          <div className="mb-1.5 text-[11px] font-semibold text-emerald-300">Competitor min</div>
+          <div className="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 text-[11px] text-slate-100">
+            <span className="shrink-0 text-slate-400">Amount</span>
+            <span className="font-semibold tabular-nums text-emerald-300">€{data.min}</span>
+            <span className="shrink-0 text-slate-400">Rate plan</span>
+            <span className="break-words leading-snug">{data.competitorMinRatePlan}</span>
+            <span className="shrink-0 text-slate-400">Cheapest on</span>
+            <span className="break-words leading-snug">{data.competitorMinChannel}</span>
+          </div>
+        </div>
+        <div className="rounded-md border border-white/15 bg-white/[0.08] px-2.5 py-2">
+          <div className="mb-1.5 text-[11px] font-semibold text-red-300">Competitor max</div>
+          <div className="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 text-[11px] text-slate-100">
+            <span className="shrink-0 text-slate-400">Amount</span>
+            <span className="font-semibold tabular-nums text-red-300">€{data.max}</span>
+            <span className="shrink-0 text-slate-400">Rate plan</span>
+            <span className="break-words leading-snug">{data.competitorMaxRatePlan}</span>
+            <span className="shrink-0 text-slate-400">Cheapest on</span>
+            <span className="break-words leading-snug">{data.competitorMaxChannel}</span>
+          </div>
+        </div>
+      </div>
+      {tooltipLayout?.placement === 'above' && (
+        <div className="pointer-events-none absolute top-full left-1/2 z-[1] -mt-px -translate-x-1/2 drop-shadow-[0_2px_3px_rgba(0,0,0,0.4)]">
+          <div className="h-0 w-0 border-l-[12px] border-r-[12px] border-t-[12px] border-l-transparent border-r-transparent border-t-[#141622]" />
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <td
       className="px-0 py-2 border-r border-[#e0e0e0] relative align-middle"
       style={{ backgroundColor: `${data.parity.color}15` }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => {
+        clearCloseTimer();
+        setIsHovered(true);
+      }}
+      onMouseLeave={scheduleClose}
       data-tour={dataTour}
     >
-      {/* Tooltip on hover */}
-      {isHovered && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-2 z-50 pointer-events-none">
-          <div className="bg-[#1a1d2e] text-white text-[10px] rounded-lg px-3 py-2 whitespace-nowrap shadow-xl">
-            <div className="font-semibold mb-1.5 pb-1.5 border-b border-gray-700">
-              {data.date.day}, {data.date.date} {data.date.month}
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-400">My Rate:</span>
-                <span className="text-[#60a5fa] font-semibold">€{data.rate}</span>
-              </div>
-              <div className="h-px bg-gray-700 my-1.5"></div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-400">Max (Comp):</span>
-                <span className="text-green-400">€{data.max}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-400">Min (Comp):</span>
-                <span className="text-red-400">€{data.min}</span>
-              </div>
-              <div className="h-px bg-gray-700 my-1.5"></div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-400">Parity Score:</span>
-                <span className="text-white font-semibold">{data.parity.score}%</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-400">Parity Status:</span>
-                <span className="font-semibold" style={{ color: data.parity.color }}>
-                  {data.parity.type}
-                </span>
-              </div>
-            </div>
-            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
-              <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-[#1a1d2e]"></div>
-            </div>
-          </div>
-        </div>
-      )}
+      {isHovered && typeof document !== 'undefined' && createPortal(tooltipContent, document.body)}
 
       {/* Chart SVG — centered in cell vs tall legend column; overflow hidden stops bleed into row above */}
-      <div className="flex items-center justify-center w-full pt-1 pb-2">
+      <div ref={chartAnchorRef} className="flex items-center justify-center w-full pt-1 pb-2">
       <svg
         width="100%"
         height={chartHeight}
@@ -345,10 +553,10 @@ function ChartColumn({
           y1={`${maxY}%`}
           x2="calc(50% + 8px)"
           y2={`${maxY}%`}
-          stroke="#4caf50"
+          stroke="#f44336"
           strokeWidth="2.5"
         />
-        <circle cx="50%" cy={`${maxY}%`} r="3" fill="#4caf50" />
+        <circle cx="50%" cy={`${maxY}%`} r="3" fill="#f44336" />
 
         {/* Min rate indicator (T-shape bottom) */}
         <line
@@ -356,10 +564,10 @@ function ChartColumn({
           y1={`${minY}%`}
           x2="calc(50% + 8px)"
           y2={`${minY}%`}
-          stroke="#f44336"
+          stroke="#4caf50"
           strokeWidth="2.5"
         />
-        <circle cx="50%" cy={`${minY}%`} r="3" fill="#f44336" />
+        <circle cx="50%" cy={`${minY}%`} r="3" fill="#4caf50" />
 
         {/* Line from previous column to this column center */}
         {hasPrev && prevMyRateY !== null && (
