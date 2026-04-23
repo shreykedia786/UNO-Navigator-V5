@@ -39,20 +39,15 @@ const CHANNEL_OTA_OPTIONS = [
   'Kayak'
 ];
 
-/** Max compset rows visible at once (Competitor Rate Analysis tab). */
-const MAX_COMPSETS_IN_VIEW = 10;
-
 function strHash(s: string): number {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
   return Math.abs(h);
 }
 
+/** Default: every compset included (“All” in the picker). */
 function initialCompsetSelection(count: number): boolean[] {
-  if (count <= MAX_COMPSETS_IN_VIEW) return Array.from({ length: count }, () => true);
-  const next = Array.from({ length: count }, () => false);
-  for (let i = 0; i < MAX_COMPSETS_IN_VIEW; i++) next[i] = true;
-  return next;
+  return Array.from({ length: count }, () => true);
 }
 
 function formatInsightDate(d: { day: string; date: string; month: string }) {
@@ -359,6 +354,40 @@ function ParityTooltipHeaderRateViolation() {
   );
 }
 
+function ParityAvailabilityViolationBadgeIcon({ size = 'md' }: { size?: 'sm' | 'md' }) {
+  const dim = size === 'sm' ? 12 : 14;
+  return (
+    <svg width={dim} height={dim} viewBox="0 0 16 16" fill="none" className="shrink-0" aria-hidden>
+      <circle cx="8" cy="8" r="7" stroke="#dc2626" strokeWidth="1.5" fill="none" />
+      <text x="8" y="11" textAnchor="middle" fontSize="10" fontWeight="600" fill="#dc2626">
+        A
+      </text>
+    </svg>
+  );
+}
+
+/** Parity tooltip header — direct sold out while an OTA still lists rooms (same chrome as rate violation, red). */
+function ParityTooltipHeaderAvailabilityViolation() {
+  return (
+    <div
+      role="status"
+      aria-label="Availability violation"
+      title="Direct channel shows no availability, but at least one OTA still sells this room."
+      className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-rose-200/90 bg-rose-50 py-1 pl-1 pr-2.5 shadow-sm"
+    >
+      <span
+        className="flex size-[15px] shrink-0 items-center justify-center rounded-full bg-rose-600 text-[8px] font-bold leading-none text-white"
+        aria-hidden
+      >
+        A
+      </span>
+      <span className="text-[10px] font-semibold leading-none tracking-tight text-rose-900">
+        Availability violation
+      </span>
+    </div>
+  );
+}
+
 /** Parity tab OTA cell — two-column rates + outcome strip (rate violation lives in tooltip header). */
 function ParityTooltipModernBody({
   myRate,
@@ -374,7 +403,9 @@ function ParityTooltipModernBody({
   lossPercent,
   isWin,
   winAmount,
-  winPercent
+  winPercent,
+  currencySymbol,
+  availabilityViolation = false
 }: {
   myRate: number;
   channelRate: number;
@@ -392,20 +423,32 @@ function ParityTooltipModernBody({
   /** Channel rate − your rate when Win (favourable spread). */
   winAmount: number;
   winPercent: number;
+  currencySymbol: string;
+  /** Direct sold out while channel still lists a rate — only the “Your rate” tile shows Sold out; Loss strip matches rate violation layout. */
+  availabilityViolation?: boolean;
 }) {
   const statusChip =
     status === 'Loss'
       ? 'bg-rose-100 text-rose-900 ring-1 ring-rose-200/80'
       : status === 'Win'
-        ? 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/80'
-        : 'bg-amber-100 text-amber-950 ring-1 ring-amber-200/80';
+        ? 'bg-amber-100 text-amber-950 ring-1 ring-amber-200/80'
+        : 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/80';
 
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl bg-gradient-to-b from-slate-50 to-white p-2.5 shadow-sm ring-1 ring-slate-200/70">
           <div className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-400">Your rate</div>
-          <div className="mt-0.5 text-[17px] font-semibold tabular-nums tracking-tight text-slate-900">€{myRate}</div>
+          <div className="mt-0.5 text-[17px] font-semibold tabular-nums tracking-tight text-slate-900">
+            {availabilityViolation ? (
+              <span className="text-[15px] font-semibold tracking-tight text-slate-500">Sold out</span>
+            ) : (
+              <>
+                {currencySymbol}
+                {myRate}
+              </>
+            )}
+          </div>
           <div className="text-[8px] font-medium text-slate-400">Brand.com</div>
           {showPlans ? (
             <p className="m-0 mt-1.5 border-t border-slate-200/70 pt-1.5 text-[10px] leading-snug text-slate-700 line-clamp-2">
@@ -415,7 +458,10 @@ function ParityTooltipModernBody({
         </div>
         <div className="rounded-xl bg-gradient-to-b from-slate-50 to-white p-2.5 shadow-sm ring-1 ring-slate-200/70">
           <div className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-400">Channel</div>
-          <div className="mt-0.5 text-[17px] font-semibold tabular-nums tracking-tight text-slate-900">€{channelRate}</div>
+          <div className="mt-0.5 text-[17px] font-semibold tabular-nums tracking-tight text-slate-900">
+            {currencySymbol}
+            {channelRate}
+          </div>
           <div className="line-clamp-1 text-[8px] font-medium text-slate-400">{channelSiteLabel}</div>
           {showPlans ? (
             <p className="m-0 mt-1.5 border-t border-slate-200/70 pt-1.5 text-[10px] leading-snug text-slate-700 line-clamp-2">
@@ -430,19 +476,28 @@ function ParityTooltipModernBody({
         role="status"
       >
         <span className={cn('rounded-lg px-2.5 py-1 text-[11px] font-semibold', statusChip)}>{status}</span>
-        <span className="text-[11px] font-medium text-slate-600">
-          Gap <span className="tabular-nums font-semibold text-slate-900">{gapPct}%</span>
-        </span>
+        {!availabilityViolation ? (
+          <span className="text-[11px] font-medium text-slate-600">
+            Gap <span className="tabular-nums font-semibold text-slate-900">{gapPct}%</span>
+          </span>
+        ) : null}
         {isLoss ? (
           <span className="ml-auto text-[12px] font-semibold tabular-nums text-rose-600">
-            €{lossAmount}{' '}
-            <span className="text-[11px] font-semibold text-rose-500/95">({lossPercent}%)</span>
+            {currencySymbol}
+            {lossAmount}
+            {!availabilityViolation ? (
+              <>
+                {' '}
+                <span className="text-[11px] font-semibold text-rose-500/95">({lossPercent}%)</span>
+              </>
+            ) : null}
           </span>
         ) : null}
         {isWin && winAmount > 0 ? (
-          <span className="ml-auto text-[12px] font-semibold tabular-nums text-emerald-700">
-            €{winAmount}{' '}
-            <span className="text-[11px] font-semibold text-emerald-600/95">({winPercent}%)</span>
+          <span className="ml-auto text-[12px] font-semibold tabular-nums text-amber-800">
+            {currencySymbol}
+            {winAmount}{' '}
+            <span className="text-[11px] font-semibold text-amber-700/95">({winPercent}%)</span>
           </span>
         ) : null}
       </div>
@@ -526,8 +581,8 @@ function ParityStatusLegendFooter({ className }: { className?: string }) {
       </div>
       <div className="flex items-center gap-1.5">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0 sm:h-4 sm:w-4">
-          <circle cx="8" cy="8" r="7" stroke="#ef4444" strokeWidth="1.5" fill="none" />
-          <text x="8" y="11" textAnchor="middle" fontSize="10" fontWeight="600" fill="#ef4444">
+          <circle cx="8" cy="8" r="7" stroke="#dc2626" strokeWidth="1.5" fill="none" />
+          <text x="8" y="11" textAnchor="middle" fontSize="10" fontWeight="600" fill="#dc2626">
             A
           </text>
         </svg>
@@ -543,6 +598,7 @@ function CompetitorRateInsightCell({
   channelName,
   competitorName,
   dateLabel,
+  currencySymbol,
   children
 }: {
   compRate: number | null;
@@ -550,6 +606,7 @@ function CompetitorRateInsightCell({
   channelName: string;
   competitorName: string;
   dateLabel: string;
+  currencySymbol: string;
   children: ReactNode;
 }) {
   if (compRate === null) {
@@ -564,53 +621,9 @@ function CompetitorRateInsightCell({
         <dl className="m-0 mt-1.5 space-y-1.5 border-t border-gray-100 pt-1.5 text-[10px] leading-snug text-gray-700">
           <div className="flex gap-3">
             <dt className="shrink-0 text-gray-500">Rate</dt>
-            <dd className="min-w-0 flex-1 text-right font-medium tabular-nums text-[#333333]">€{compRate}</dd>
-          </div>
-          <div className="flex gap-3">
-            <dt className="shrink-0 text-gray-500">Inclusion</dt>
-            <dd className="min-w-0 flex-1 text-right font-medium text-[#333333]">{inclusionPlanName}</dd>
-          </div>
-          <div className="flex gap-3">
-            <dt className="shrink-0 text-gray-500">Channel</dt>
-            <dd className="min-w-0 flex-1 text-right font-medium text-[#333333]">{channelName}</dd>
-          </div>
-        </dl>
-      }
-    >
-      {children}
-    </InsightHoverTooltip>
-  );
-}
-
-/** Tooltip for the blue "Your Rates" row — rate under hover, inclusion, channel. */
-function YourRatesRowTooltipCell({
-  roomTitle,
-  dateLabel,
-  yourRate,
-  soldOut,
-  inclusionPlanName,
-  channelName,
-  children
-}: {
-  roomTitle: string;
-  dateLabel: string;
-  yourRate: number;
-  soldOut: boolean;
-  inclusionPlanName: string;
-  channelName: string;
-  children: ReactNode;
-}) {
-  return (
-    <InsightHoverTooltip
-      title={roomTitle}
-      dateLabel={dateLabel}
-      triggerClassName="relative flex min-h-[1.75rem] w-full min-w-0 items-center justify-center py-0.5"
-      body={
-        <dl className="m-0 mt-1.5 space-y-1.5 border-t border-gray-100 pt-1.5 text-[10px] leading-snug text-gray-700">
-          <div className="flex gap-3">
-            <dt className="shrink-0 text-gray-500">Rate</dt>
             <dd className="min-w-0 flex-1 text-right font-medium tabular-nums text-[#333333]">
-              {soldOut ? '—' : `€${yourRate}`}
+              {currencySymbol}
+              {compRate}
             </dd>
           </div>
           <div className="flex gap-3">
@@ -629,6 +642,59 @@ function YourRatesRowTooltipCell({
   );
 }
 
+/** Tooltip for the blue "Your Rates" row — rate under hover and inclusion. */
+function YourRatesRowTooltipCell({
+  roomTitle,
+  dateLabel,
+  yourRate,
+  soldOut,
+  inclusionPlanName,
+  currencySymbol,
+  detailSlot,
+  children
+}: {
+  roomTitle: string;
+  dateLabel: string;
+  yourRate: number;
+  soldOut: boolean;
+  inclusionPlanName: string;
+  currencySymbol: string;
+  /** Optional extra block (e.g. parity summary on the Parity tab). */
+  detailSlot?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <InsightHoverTooltip
+      title={roomTitle}
+      dateLabel={dateLabel}
+      triggerClassName="relative flex min-h-[1.75rem] w-full min-w-0 items-center justify-center py-0.5"
+      body={
+        <>
+          <dl className="m-0 mt-1.5 space-y-1.5 border-t border-gray-100 pt-1.5 text-[10px] leading-snug text-gray-700">
+            <div className="flex gap-3">
+              <dt className="shrink-0 text-gray-500">Rate</dt>
+              <dd className="min-w-0 flex-1 text-right font-medium tabular-nums text-[#333333]">
+                {soldOut ? '—' : `${currencySymbol}${yourRate}`}
+              </dd>
+            </div>
+            <div className="flex gap-3">
+              <dt className="shrink-0 text-gray-500">Inclusion</dt>
+              <dd className="min-w-0 flex-1 text-right font-medium text-[#333333]">{inclusionPlanName}</dd>
+            </div>
+          </dl>
+          {detailSlot ? (
+            <div className="mt-2 border-t border-gray-100 pt-2 text-[10px] leading-snug text-gray-600">
+              {detailSlot}
+            </div>
+          ) : null}
+        </>
+      }
+    >
+      {children}
+    </InsightHoverTooltip>
+  );
+}
+
 interface EventData {
   name: string;
   dateRange: string;
@@ -639,12 +705,28 @@ interface EventData {
   confidenceScore: string;
 }
 
+/** Currency for all amounts in the drawer — use full `displayName` when the symbol is ambiguous (e.g. $). */
+export type DetailedCompetitorRateCurrency = {
+  /** ISO 4217, e.g. EUR, USD, AUD */
+  code: string;
+  /** Human-readable name, e.g. "US Dollars", "Australian Dollars", "Euro" */
+  displayName: string;
+  /** Prefix shown before numeric amounts, e.g. €, $, A$ */
+  symbol: string;
+};
+
+export const DEFAULT_DETAILED_COMPETITOR_RATE_CURRENCY: DetailedCompetitorRateCurrency = {
+  code: 'EUR',
+  displayName: 'Euro',
+  symbol: '€'
+};
+
 interface DetailedCompetitorModalProps {
   dates: Array<{ day: string; date: string; month: string }>;
   rates: number[];
   chartData: Array<{ rate: number; min: number; max: number; date: { day: string; date: string; month: string } }>;
   roomType?: string;
-  /** Rate plan names for the Inclusions filter (after "Any"). */
+  /** Plan names listed in the Inclusion dropdown after "Any (Lowest Rateplan)". */
   inclusionPlanNames?: string[];
   ratePlan?: string;
   events?: Array<EventData | null>;
@@ -652,9 +734,11 @@ interface DetailedCompetitorModalProps {
   editableYourRates?: boolean;
   onYourRateChange?: (globalDateIndex: number, rawValue: string) => void;
   onClose: () => void;
+  /** When omitted, defaults to Euro — pass explicit USD/AUD etc. so "$" is not ambiguous. */
+  rateCurrency?: DetailedCompetitorRateCurrency;
 }
 
-/** Compset rows in the Competitor tab table — same list powers the Compsets dropdown (max 10 visible at once). */
+/** Compset rows in the Competitor tab table — same list powers the Compsets dropdown. */
 const competitors = [
   { name: 'Central Hotel', color: '#4caf50' },
   { name: 'Hotel Palermitano by DecO', color: '#2196F3' },
@@ -683,12 +767,16 @@ function CompsetPickerDropdown({
   competitors: compsetRows,
   compsetSelection,
   toggleCompset,
-  selectedCompsetCount
+  selectedCompsetCount,
+  selectAllCompsets,
+  resetCompsetsToFirstOnly
 }: {
   competitors: CompsetRowDef[];
   compsetSelection: boolean[];
   toggleCompset: (index: number) => void;
   selectedCompsetCount: number;
+  selectAllCompsets: () => void;
+  resetCompsetsToFirstOnly: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -731,6 +819,15 @@ function CompsetPickerDropdown({
     return () => document.removeEventListener('mousedown', down, true);
   }, [open]);
 
+  const total = compsetRows.length;
+  const allSelected = total > 0 && selectedCompsetCount === total;
+  const partialSelected = selectedCompsetCount > 0 && selectedCompsetCount < total;
+  const allRowChecked: boolean | 'indeterminate' = allSelected
+    ? true
+    : partialSelected
+      ? 'indeterminate'
+      : false;
+
   return (
     <div ref={wrapRef} className="inline-flex w-[min(220px,42vw)] max-w-[260px] min-w-0">
       <Button
@@ -746,7 +843,9 @@ function CompsetPickerDropdown({
         }}
       >
         <span className="min-w-0 truncate">
-          {selectedCompsetCount} selected (max {MAX_COMPSETS_IN_VIEW})
+          {selectedCompsetCount === compsetRows.length
+            ? 'All Competitors'
+            : `${selectedCompsetCount} of ${compsetRows.length}`}
         </span>
         <ChevronDown className="size-4 shrink-0 opacity-50" />
       </Button>
@@ -756,7 +855,7 @@ function CompsetPickerDropdown({
           <div
             ref={panelRef}
             role="listbox"
-            className="fixed max-h-[min(320px,55vh)] overflow-y-auto rounded-lg border border-gray-200 bg-white p-3 shadow-xl"
+            className="fixed max-h-[min(380px,65vh)] overflow-y-auto rounded-lg border border-gray-200 bg-white p-3 shadow-xl"
             style={{
               zIndex: COMPSET_PICKER_Z_INDEX,
               top: box.top,
@@ -765,19 +864,30 @@ function CompsetPickerDropdown({
             }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <p className="mb-2.5 text-[11px] leading-snug text-gray-600">
-              Pick up to {MAX_COMPSETS_IN_VIEW} compsets; uncheck one to enable another when at the limit.
-            </p>
-            <ul className="m-0 max-h-[min(260px,45vh)] list-none space-y-2 overflow-y-auto p-0 pr-0.5">
+            <ul className="m-0 max-h-[min(300px,52vh)] list-none space-y-2 overflow-y-auto p-0 pr-0.5">
+              <li className="flex items-start gap-2 border-b border-gray-100 pb-2">
+                <Checkbox
+                  id="compset-picker-all"
+                  checked={allRowChecked}
+                  onCheckedChange={(v) => {
+                    if (v === true) selectAllCompsets();
+                    else if (v === false) resetCompsetsToFirstOnly();
+                  }}
+                />
+                <Label
+                  htmlFor="compset-picker-all"
+                  className="cursor-pointer text-left text-[12px] font-semibold leading-tight text-[#333333]"
+                >
+                  All Competitors
+                </Label>
+              </li>
               {compsetRows.map((c, idx) => {
-                const atCap = !compsetSelection[idx] && selectedCompsetCount >= MAX_COMPSETS_IN_VIEW;
                 return (
                   <li key={c.name} className="flex items-start gap-2">
                     <Checkbox
                       id={`compset-picker-${idx}`}
                       checked={compsetSelection[idx]}
                       onCheckedChange={() => toggleCompset(idx)}
-                      disabled={atCap}
                     />
                     <Label
                       htmlFor={`compset-picker-${idx}`}
@@ -806,8 +916,12 @@ export function DetailedCompetitorModal({
   events,
   editableYourRates = false,
   onYourRateChange,
-  onClose
+  onClose,
+  rateCurrency: rateCurrencyProp
 }: DetailedCompetitorModalProps) {
+  const rateCurrency = rateCurrencyProp ?? DEFAULT_DETAILED_COMPETITOR_RATE_CURRENCY;
+  const currencySymbol = rateCurrency.symbol;
+
   const [dateOffset, setDateOffset] = useState(0);
   const [activeTab, setActiveTab] = useState<'competitor' | 'parity'>('competitor');
   const [isClosing, setIsClosing] = useState(false);
@@ -824,11 +938,11 @@ export function DetailedCompetitorModal({
           size="sm"
           className="h-8 w-[min(220px,42vw)] max-w-[260px] text-[12px] font-semibold text-[#333333] bg-white border-[#d0d0d0]"
         >
-          <SelectValue placeholder="Any" />
+          <SelectValue placeholder="Any (Lowest Rateplan)" />
         </SelectTrigger>
         <SelectContent className="z-[10050]">
           <SelectItem value="any" className="text-[12px]">
-            Any (cheapest rate plan)
+            Any (Lowest Rateplan)
           </SelectItem>
           {inclusionPlans.map((name) => (
             <SelectItem key={name} value={name} className="text-[12px]">
@@ -896,7 +1010,7 @@ export function DetailedCompetitorModal({
   };
 
   /**
-   * Demo rates: default (Inclusions = Any, Channels = Any) biases toward the cheapest offers across compsets.
+   * Demo rates: default (Inclusion = Any (Lowest Rateplan), Channels = Any) biases toward the cheapest offers across compsets.
    * Specific inclusion/channel shifts rates for apple-to-apple comparison.
    */
   const getCompetitorRateForDate = useCallback(
@@ -998,11 +1112,19 @@ export function DetailedCompetitorModal({
         next[index] = false;
         return next;
       }
-      if (count >= MAX_COMPSETS_IN_VIEW) return prev;
       next[index] = true;
       return next;
     });
   };
+
+  const selectAllCompsets = useCallback(() => {
+    setCompsetSelection(Array.from({ length: competitors.length }, () => true));
+  }, []);
+
+  /** Master “All” unchecked from full selection — keep a single compset so the table stays valid. */
+  const resetCompsetsToFirstOnly = useCallback(() => {
+    setCompsetSelection((prev) => prev.map((_, i) => i === 0));
+  }, []);
 
   // Check if date has events/holidays
   const hasEvent = (dateIndex: number) => {
@@ -1042,8 +1164,8 @@ export function DetailedCompetitorModal({
             <X className="w-5 h-5" />
           </button>
 
-          {/* Tabs — pr matches close control inset */}
-          <div className="flex items-center gap-4 px-6 pt-4 pr-14">
+          {/* Tabs — pr matches close control inset; currency label disambiguates $ etc. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 pt-4 pr-14">
             <div className="flex min-w-0 gap-6 sm:gap-8">
               <button
                 onClick={() => {
@@ -1072,6 +1194,15 @@ export function DetailedCompetitorModal({
                 Parity Analysis
               </button>
             </div>
+            <p
+              className="m-0 max-w-[min(100%,28rem)] shrink-0 text-right text-[11px] leading-snug text-[#666666]"
+              title={`All rates in this view are in ${rateCurrency.displayName} (${rateCurrency.code}).`}
+            >
+              <span className="sr-only">Currency: </span>
+              <span className="font-semibold text-[#333333]">{rateCurrency.displayName}</span>
+              <span className="tabular-nums"> ({rateCurrency.code})</span>
+              <span className="text-[#888888]"> · rates below</span>
+            </p>
           </div>
 
           {/* Room name + filters — same layout rules on both tabs so title and controls stay aligned */}
@@ -1084,10 +1215,12 @@ export function DetailedCompetitorModal({
                 <NavigatorYourRatesDisclaimer />
               </div>
               <div className="flex min-w-0 basis-full flex-wrap items-start justify-end gap-x-4 gap-y-2 sm:basis-auto sm:justify-end">
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="text-[10px] font-medium text-[#666666] uppercase tracking-wide">Rate plan</span>
-                  {ratePlanSelectControl}
-                </div>
+                {activeTab === 'competitor' && (
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="text-[10px] font-medium text-[#666666] uppercase tracking-wide">Inclusion</span>
+                    {ratePlanSelectControl}
+                  </div>
+                )}
                 {activeTab === 'competitor' && (
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <span className="text-[10px] font-medium text-[#666666] uppercase tracking-wide">Channels</span>
@@ -1121,6 +1254,8 @@ export function DetailedCompetitorModal({
                       compsetSelection={compsetSelection}
                       toggleCompset={toggleCompset}
                       selectedCompsetCount={selectedCompsetCount}
+                      selectAllCompsets={selectAllCompsets}
+                      resetCompsetsToFirstOnly={resetCompsetsToFirstOnly}
                     />
                   </div>
                 )}
@@ -1146,7 +1281,7 @@ export function DetailedCompetitorModal({
             <button
               onClick={handlePrevious}
               disabled={!canGoPrevious}
-              className={`absolute left-[440px] top-[14.5px] z-20 w-7 h-10 flex items-center justify-center bg-white border border-[#e0e0e0] hover:bg-gray-50 transition-colors ${!canGoPrevious ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`absolute left-[1160px] top-[10px] z-20 w-7 h-10 flex items-center justify-center bg-white border border-[#e0e0e0] hover:bg-gray-50 transition-colors ${!canGoPrevious ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <ChevronLeft className="w-4 h-4 text-[#999999]" />
             </button>
@@ -1229,7 +1364,7 @@ export function DetailedCompetitorModal({
                         yourRate={rate}
                         soldOut={soldOut}
                         inclusionPlanName={resolveTooltipInclusionPlan(0, globalIdx)}
-                        channelName={resolveTooltipChannel(0, globalIdx)}
+                        currencySymbol={currencySymbol}
                       >
                         {editableYourRates && onYourRateChange ? (
                           <input
@@ -1244,7 +1379,10 @@ export function DetailedCompetitorModal({
                         ) : soldOut ? (
                           <span className="text-gray-400 font-normal">Sold Out</span>
                         ) : (
-                          <span className="text-[#333333]">€{rate}</span>
+                          <span className="text-[#333333]">
+                            {currencySymbol}
+                            {rate}
+                          </span>
                         )}
                       </YourRatesRowTooltipCell>
                     </td>
@@ -1309,6 +1447,7 @@ export function DetailedCompetitorModal({
                           hasPrev={!!prevData}
                           hasNext={!!nextData}
                           hasEvent={hasEvent(idx)}
+                          currencySymbol={currencySymbol}
                         />
                       </div>
                     </td>
@@ -1332,7 +1471,10 @@ export function DetailedCompetitorModal({
                               {avgRate === null ? (
                                 <span className="text-[13px] font-normal text-gray-400">N/A</span>
                               ) : (
-                                <span className="text-black">€{avgRate}</span>
+                                <span className="text-black">
+                                  {currencySymbol}
+                                  {avgRate}
+                                </span>
                               )}
                             </td>
                           );
@@ -1392,17 +1534,23 @@ export function DetailedCompetitorModal({
                                         ? formatInsightDate(visibleDates[dateIdx])
                                         : ''
                                     }
+                                    currencySymbol={currencySymbol}
                                   >
                                     {compRate === null ? null : isMaxRate ? (
                                       <span className="text-[14px] font-bold text-[#f44336]">
-                                        €{compRate}
+                                        {currencySymbol}
+                                        {compRate}
                                       </span>
                                     ) : isMinRate ? (
                                       <span className="text-[14px] font-bold text-[#4caf50]">
-                                        €{compRate}
+                                        {currencySymbol}
+                                        {compRate}
                                       </span>
                                     ) : (
-                                      <span className="text-[14px] text-[#333333]">€{compRate}</span>
+                                      <span className="text-[14px] text-[#333333]">
+                                        {currencySymbol}
+                                        {compRate}
+                                      </span>
                                     )}
                                   </CompetitorRateInsightCell>
                                 </td>
@@ -1424,10 +1572,12 @@ export function DetailedCompetitorModal({
               visibleDates={visibleDates}
               visibleRates={visibleRates}
               dateOffset={dateOffset}
+              roomType={roomType}
               getCompetitorRateForDate={getCompetitorRateForDate}
               resolveParityCellRatePlan={resolveParityCellRatePlan}
               resolveParityYourRatePlan={resolveParityYourRatePlan}
               showTooltipRatePlanNames={inclusionFilter === 'any'}
+              rateCurrency={rateCurrency}
             />
           )}
         </div>
@@ -1460,25 +1610,39 @@ export function DetailedCompetitorModal({
   );
 }
 
+/** Parity demo: sold-out direct + one OTA still listing — anchored to this calendar column when visible. */
+function indexOfSat24JanInWindow(
+  dates: Array<{ day: string; date: string; month: string }>
+): number | null {
+  const i = dates.findIndex((d) => d.day === 'Sat' && d.date === '24' && d.month === 'Jan');
+  return i === -1 ? null : i;
+}
+
 // Parity Analysis Component
 function ParityAnalysisContent({
   visibleDates,
   visibleRates,
   dateOffset,
+  roomType,
   getCompetitorRateForDate,
   resolveParityCellRatePlan,
   resolveParityYourRatePlan,
-  showTooltipRatePlanNames
+  showTooltipRatePlanNames,
+  rateCurrency
 }: {
   visibleDates: Array<{ day: string; date: string; month: string }>;
   visibleRates: number[];
   dateOffset: number;
+  roomType: string;
   getCompetitorRateForDate: (competitorIndex: number, dateIndex: number, myRate: number) => number | null;
   resolveParityCellRatePlan: (channelIdx: number, globalDateIdx: number) => string;
   resolveParityYourRatePlan: (globalDateIdx: number) => string;
   /** When false, OTA rate tooltips omit rate plan names (specific plan filter = apple-to-apple). */
   showTooltipRatePlanNames: boolean;
+  rateCurrency: DetailedCompetitorRateCurrency;
 }) {
+  const currencySymbol = rateCurrency.symbol;
+
   // Channel names matching the screenshot structure
   const channelNames = [
     'MakeMyTrip',
@@ -1492,6 +1656,40 @@ function ParityAnalysisContent({
     'Priceline',
     'Kayak'
   ];
+
+  /**
+   * Parity tab only: one illustrative night where Brand.com is sold out but Hotels.com still lists a rate —
+   * scored as Loss + availability violation (inventory parity), not a price-only rate violation.
+   */
+  const availabilityDemo = useMemo(() => {
+    const dateIdx = indexOfSat24JanInWindow(visibleDates);
+    if (dateIdx === null) return null;
+    return { dateIdx, channelIdx: 7, otaRate: 289 } as const;
+  }, [visibleDates]);
+
+  const parityRates = useMemo(() => {
+    if (!availabilityDemo) return visibleRates;
+    const next = [...visibleRates];
+    if (next.length > availabilityDemo.dateIdx) {
+      next[availabilityDemo.dateIdx] = 0;
+    }
+    return next;
+  }, [visibleRates, availabilityDemo]);
+
+  const getParityChannelRate = useCallback(
+    (channelIdx: number, dateIdx: number): number | null => {
+      if (availabilityDemo && dateIdx === availabilityDemo.dateIdx) {
+        if (channelIdx === availabilityDemo.channelIdx) return availabilityDemo.otaRate;
+        return null;
+      }
+      return getCompetitorRateForDate(
+        channelIdx,
+        dateOffset + dateIdx,
+        parityRates[dateIdx] ?? 0
+      );
+    },
+    [availabilityDemo, dateOffset, getCompetitorRateForDate, parityRates]
+  );
 
   // Calculate parity status for a channel rate vs your rate
   const getParityStatus = (channelRate: number, myRate: number) => {
@@ -1518,16 +1716,21 @@ function ParityAnalysisContent({
     let lossCount = 0;
     let totalCount = 0;
 
-    for (let dateIdx = 0; dateIdx < visibleRates.length; dateIdx++) {
-      const myRate = visibleRates[dateIdx];
-      const channelRate = getCompetitorRateForDate(channelIdx, dateOffset + dateIdx, myRate);
+    for (let dateIdx = 0; dateIdx < parityRates.length; dateIdx++) {
+      const myRate = parityRates[dateIdx];
+      const channelRate = getParityChannelRate(channelIdx, dateIdx);
 
-      if (channelRate !== null && myRate > 0) {
+      if (channelRate === null) continue;
+
+      if (myRate > 0) {
         totalCount++;
         const status = getParityStatus(channelRate, myRate);
         if (status === 'Win') winCount++;
         else if (status === 'Meet') meetCount++;
         else lossCount++;
+      } else {
+        totalCount++;
+        lossCount++;
       }
     }
 
@@ -1545,19 +1748,75 @@ function ParityAnalysisContent({
     let totalCount = 0;
 
     for (let i = 0; i < channelNames.length; i++) {
-      const myRate = visibleRates[dateIdx];
-      const channelRate = getCompetitorRateForDate(i, dateOffset + dateIdx, myRate);
+      const myRate = parityRates[dateIdx];
+      const channelRate = getParityChannelRate(i, dateIdx);
 
-      if (channelRate !== null && myRate > 0) {
+      if (channelRate === null) continue;
+
+      if (myRate > 0) {
         totalCount++;
         const status = getParityStatus(channelRate, myRate);
         if (status === 'Win' || status === 'Meet') {
           goodCount++;
         }
+      } else {
+        totalCount++;
       }
     }
 
     return totalCount > 0 ? Math.round((goodCount / totalCount) * 100) : 0;
+  };
+
+  /** Per visible date: Win / Meet / Loss counts across all channels (drives Your Rates column tint). */
+  const getDateParityCounts = (dateIdx: number) => {
+    let winCount = 0;
+    let meetCount = 0;
+    let lossCount = 0;
+    let totalCount = 0;
+
+    for (let i = 0; i < channelNames.length; i++) {
+      const myRate = parityRates[dateIdx];
+      const channelRate = getParityChannelRate(i, dateIdx);
+
+      if (channelRate === null) continue;
+
+      if (myRate > 0) {
+        totalCount++;
+        const status = getParityStatus(channelRate, myRate);
+        if (status === 'Win') winCount++;
+        else if (status === 'Meet') meetCount++;
+        else lossCount++;
+      } else {
+        totalCount++;
+        lossCount++;
+      }
+    }
+
+    return { winCount, meetCount, lossCount, totalCount };
+  };
+
+  /** Cell background for Your Rates date columns — dominant outcome vs same overall-parity logic. */
+  const getYourRateParityColumnTint = (dateIdx: number, myRate: number) => {
+    if (!myRate || myRate === 0) {
+      const { lossCount, totalCount } = getDateParityCounts(dateIdx);
+      if (totalCount > 0 && lossCount === totalCount) {
+        return { bg: '#fee2e2', text: '#991b1b' as const };
+      }
+      return { bg: '#f3f4f6', text: '#6b7280' as const };
+    }
+    const { winCount, meetCount, lossCount, totalCount } = getDateParityCounts(dateIdx);
+    if (totalCount === 0) {
+      return { bg: '#e5e7eb', text: '#4b5563' as const };
+    }
+    const dominant: 'Win' | 'Meet' | 'Loss' =
+      lossCount >= winCount && lossCount >= meetCount
+        ? 'Loss'
+        : winCount >= meetCount && winCount >= lossCount
+          ? 'Win'
+          : 'Meet';
+    if (dominant === 'Win') return { bg: '#fff7ed', text: '#9a3412' as const };
+    if (dominant === 'Meet') return { bg: '#dcfce7', text: '#166534' as const };
+    return { bg: '#fee2e2', text: '#991b1b' as const };
   };
 
   /** Win/Meet/Loss mix and parity score (Win% + Meet%) across every channel × visible date with data. */
@@ -1569,15 +1828,20 @@ function ParityAnalysisContent({
 
     const channelCount = channelNames.length;
     for (let channelIdx = 0; channelIdx < channelCount; channelIdx++) {
-      for (let dateIdx = 0; dateIdx < visibleRates.length; dateIdx++) {
-        const myRate = visibleRates[dateIdx];
-        const channelRate = getCompetitorRateForDate(channelIdx, dateOffset + dateIdx, myRate);
-        if (channelRate !== null && myRate > 0) {
+      for (let dateIdx = 0; dateIdx < parityRates.length; dateIdx++) {
+        const myRate = parityRates[dateIdx];
+        const channelRate = getParityChannelRate(channelIdx, dateIdx);
+        if (channelRate === null) continue;
+
+        if (myRate > 0) {
           totalCount++;
           const status = getParityStatus(channelRate, myRate);
           if (status === 'Win') winCount++;
           else if (status === 'Meet') meetCount++;
           else lossCount++;
+        } else {
+          totalCount++;
+          lossCount++;
         }
       }
     }
@@ -1588,11 +1852,26 @@ function ParityAnalysisContent({
     const parityScore = Math.round(winPercent + meetPercent);
 
     return { winPercent, meetPercent, lossPercent, parityScore };
-  }, [channelNames.length, visibleRates, dateOffset, getCompetitorRateForDate]);
+  }, [channelNames.length, parityRates, getParityChannelRate]);
 
   // Determine cell display type
   const getCellDisplay = (channelRate: number | null, myRate: number, channelIdx: number, dateIdx: number) => {
     const seed1 = (channelIdx * 17 + dateIdx * 23) % 100;
+
+    if (myRate === 0 && channelRate !== null) {
+      return { type: 'availability-violation' as const, rate: channelRate, status: 'Loss' as const };
+    }
+
+    /** Sat 24 Jan sold-out direct: other channels have no listing — green Sold out (not parity compare). */
+    if (
+      availabilityDemo &&
+      dateIdx === availabilityDemo.dateIdx &&
+      myRate === 0 &&
+      channelRate === null &&
+      channelIdx !== availabilityDemo.channelIdx
+    ) {
+      return { type: 'sold-out' as const, rate: null, status: null };
+    }
 
     if (channelRate === null || myRate === 0) {
       return { type: 'no-data' as const, rate: null, status: null };
@@ -1639,10 +1918,10 @@ function ParityAnalysisContent({
         <thead>
           <tr className="border-b border-[#e0e0e0]">
             <th className="sticky left-0 z-[25] border-r border-[#e0e0e0] bg-[#f5f5f5] px-3 py-3 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)]">
-              <div className="text-left text-[11px] font-semibold text-[#333333]">Channels</div>
+              <div className="text-left text-[12px] font-semibold text-[#333333]">Channels</div>
             </th>
             <th className="px-2 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
-              <div className="text-[10px] font-semibold text-[#333333]">Win/Meet/Loss</div>
+              <div className="text-[12px] font-semibold text-[#333333]">Win/Meet/Loss</div>
             </th>
             <th className="px-2 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
               <div className="text-[10px] font-semibold text-[#333333]">Parity Score</div>
@@ -1719,8 +1998,8 @@ function ParityAnalysisContent({
             })}
           </tr>
 
-          {/* Your Rates — below overall parity; blue band before channel rows */}
-          <tr className="border-b-2 border-[#2196F3] bg-[#E3F2FD]">
+          {/* Your Rates — label column stays benchmark blue; date columns tint from overall parity that day */}
+          <tr className="border-b-2 border-[#2196F3]">
             <td className="relative sticky left-0 z-[24] align-top border-r border-[#e0e0e0] bg-[#E3F2FD] px-3 py-3 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)]">
               <ParityBenchmarkChip />
               <div className="min-w-0 max-w-[min(100%,14rem)] pr-[5.25rem]">
@@ -1731,17 +2010,53 @@ function ParityAnalysisContent({
             <td className="px-2 py-3.5 border-r border-[#e0e0e0] bg-[#E3F2FD]" colSpan={2}>
               {/* Empty cells for Win/Meet/Loss and Parity Score columns */}
             </td>
-            {visibleRates.map((rate, idx) => {
+            {parityRates.map((rate, idx) => {
+              const globalIdx = dateOffset + idx;
+              const soldOut = rate === 0 || !rate;
+              const { bg, text } = getYourRateParityColumnTint(idx, rate);
+              const parityPct = getDateParityPercentage(idx);
+              const { winCount, meetCount, lossCount, totalCount } = getDateParityCounts(idx);
+              const dateLabel = visibleDates[idx] ? formatInsightDate(visibleDates[idx]) : '';
+
               return (
                 <td
                   key={idx}
-                  className="px-2 py-3.5 text-center text-[13px] font-semibold border-r border-[#e0e0e0] bg-[#E3F2FD]"
+                  className="px-2 py-3.5 text-center text-[13px] font-semibold border-r border-[#e0e0e0]"
+                  style={{ backgroundColor: bg }}
                 >
-                  {rate === 0 || !rate ? (
-                    <span className="text-gray-400 font-normal">Sold Out</span>
-                  ) : (
-                    <span className="text-[#333333]">€{rate}</span>
-                  )}
+                  <YourRatesRowTooltipCell
+                    roomTitle={roomType}
+                    dateLabel={dateLabel}
+                    yourRate={rate}
+                    soldOut={soldOut}
+                    inclusionPlanName={resolveParityYourRatePlan(globalIdx)}
+                    currencySymbol={currencySymbol}
+                    detailSlot={
+                      <div>
+                        <span className="font-medium text-gray-700">Overall parity (this date): </span>
+                        <span className="font-semibold tabular-nums text-[#333333]">{parityPct}%</span>
+                        {totalCount > 0 ? (
+                          <span className="text-gray-500">
+                            {' '}
+                            · {winCount} win / {meetCount} meet / {lossCount} loss
+                          </span>
+                        ) : (
+                          <span className="text-gray-500"> · no channel data</span>
+                        )}
+                      </div>
+                    }
+                  >
+                    {soldOut ? (
+                      <span className="font-normal" style={{ color: text }}>
+                        Sold Out
+                      </span>
+                    ) : (
+                      <span style={{ color: text }}>
+                        {currencySymbol}
+                        {rate}
+                      </span>
+                    )}
+                  </YourRatesRowTooltipCell>
                 </td>
               );
             })}
@@ -1762,7 +2077,7 @@ function ParityAnalysisContent({
               <tr key={channelIdx} className="border-b border-[#e0e0e0]">
                 {/* Channel Name */}
                 <td className="sticky left-0 z-[23] border-r border-[#e0e0e0] bg-white px-3 py-4 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.06)] hover:bg-gray-50">
-                  <div className="text-[12px] font-medium text-[#333333]">
+                  <div className="text-[13px] font-medium text-[#333333]">
                     {channelName}
                   </div>
                 </td>
@@ -1815,8 +2130,8 @@ function ParityAnalysisContent({
                 </td>
 
                 {/* Date Cells */}
-                {visibleRates.map((myRate, dateIdx) => {
-                  const channelRate = getCompetitorRateForDate(channelIdx, dateOffset + dateIdx, myRate);
+                {parityRates.map((myRate, dateIdx) => {
+                  const channelRate = getParityChannelRate(channelIdx, dateIdx);
                   const cellDisplay = getCellDisplay(channelRate, myRate, channelIdx, dateIdx);
 
                   const globalDateIdx = dateOffset + dateIdx;
@@ -1847,12 +2162,62 @@ function ParityAnalysisContent({
                     );
                   }
 
+                  if (cellDisplay.type === 'availability-violation' && cellDisplay.rate !== null) {
+                    const ch = cellDisplay.rate;
+
+                    return (
+                      <td
+                        key={dateIdx}
+                        className="px-2 py-4 text-center border-r border-[#e0e0e0]"
+                        style={{ backgroundColor: '#fee2e2' }}
+                      >
+                        <InsightHoverTooltip
+                          title={channelName}
+                          dateLabel={dateLabel}
+                          panelWidth={300}
+                          estimatedHeight={220}
+                          visual="elevated"
+                          headerEnd={<ParityTooltipHeaderAvailabilityViolation />}
+                          triggerClassName="relative flex min-h-[1.5rem] w-full min-w-0 items-center justify-center py-0.5"
+                          body={
+                            <ParityTooltipModernBody
+                              myRate={myRate}
+                              channelRate={ch}
+                              channelSiteLabel={channelName}
+                              yourPlan={resolveParityYourRatePlan(globalDateIdx)}
+                              channelPlan={channelRatePlan}
+                              showPlans={showTooltipRatePlanNames}
+                              status="Loss"
+                              gapPct={0}
+                              isLoss
+                              lossAmount={ch}
+                              lossPercent={0}
+                              isWin={false}
+                              winAmount={0}
+                              winPercent={0}
+                              currencySymbol={currencySymbol}
+                              availabilityViolation
+                            />
+                          }
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-[13px] font-semibold text-[#991b1b]">
+                              {currencySymbol}
+                              {cellDisplay.rate}
+                            </span>
+                            <ParityAvailabilityViolationBadgeIcon />
+                          </div>
+                        </InsightHoverTooltip>
+                      </td>
+                    );
+                  }
+
                   // rate-variation (R) only when parity status is Loss
                   const isWin = cellDisplay.status === 'Win';
                   const isMeet = cellDisplay.status === 'Meet';
                   const isLoss = cellDisplay.status === 'Loss';
-                  const bgColor = isWin ? '#dcfce7' : (isMeet ? '#fff7ed' : '#fee2e2');
-                  const textColor = isWin ? '#166534' : (isMeet ? '#9a3412' : '#991b1b');
+                  const bgColor = isWin ? '#fff7ed' : (isMeet ? '#dcfce7' : '#fee2e2');
+                  const textColor = isWin ? '#9a3412' : (isMeet ? '#166534' : '#991b1b');
 
                   const lossAmount = isLoss && cellDisplay.rate ? myRate - cellDisplay.rate : 0;
                   const lossPercent =
@@ -1904,12 +2269,14 @@ function ParityAnalysisContent({
                             isWin={isWin}
                             winAmount={winAmount}
                             winPercent={winPercent}
+                            currencySymbol={currencySymbol}
                           />
                         }
                       >
                         <div className="flex items-center justify-center gap-1">
                           <span className="text-[13px] font-semibold" style={{ color: textColor }}>
-                            €{cellDisplay.rate}
+                            {currencySymbol}
+                            {cellDisplay.rate}
                           </span>
                           {cellDisplay.type === 'rate-variation' ? <ParityRateViolationBadgeIcon /> : null}
                         </div>
@@ -1940,7 +2307,8 @@ function ChartCell({
   nextMyRateY,
   hasPrev,
   hasNext,
-  hasEvent
+  hasEvent,
+  currencySymbol
 }: {
   date: { day: string; date: string; month: string };
   myRate: number;
@@ -1954,6 +2322,7 @@ function ChartCell({
   hasPrev: boolean;
   hasNext: boolean;
   hasEvent: boolean;
+  currencySymbol: string;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const chartHeight = 112;
@@ -1974,16 +2343,25 @@ function ChartCell({
             <div className="space-y-1">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-gray-400">My Rate:</span>
-                <span className="font-semibold text-[#60a5fa]">€{myRate}</span>
+                <span className="font-semibold text-[#60a5fa]">
+                  {currencySymbol}
+                  {myRate}
+                </span>
               </div>
               <div className="my-1.5 h-px bg-gray-700" />
               <div className="flex items-center justify-between gap-3">
                 <span className="text-gray-400">Max (Comp):</span>
-                <span className="text-red-400">€{maxRate}</span>
+                <span className="text-red-400">
+                  {currencySymbol}
+                  {maxRate}
+                </span>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-gray-400">Min (Comp):</span>
-                <span className="text-green-400">€{minRate}</span>
+                <span className="text-green-400">
+                  {currencySymbol}
+                  {minRate}
+                </span>
               </div>
             </div>
             <div className="absolute left-1/2 top-full -mt-px -translate-x-1/2">

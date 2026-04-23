@@ -2,7 +2,10 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Info } from 'lucide-react';
 import { LegendIconMax, LegendIconMin, LegendIconMyRate } from './CompetitorChartLegendIcons';
-import { DetailedCompetitorModal } from './DetailedCompetitorModal';
+import {
+  DetailedCompetitorModal,
+  type DetailedCompetitorRateCurrency
+} from './DetailedCompetitorModal';
 
 /** Matches onboarding UI blue (`OnboardingTour`: `#2753eb` icons / gradient). Prepends `brightness(0)` for raster logos. */
 const NAVIGATOR_LOGO_BRAND_FILTER =
@@ -44,6 +47,8 @@ interface CandlestickChartProps {
     demandMultiplier: string;
     confidenceScore: string;
   } | null>;
+  /** Drawer uses this for the header label and amount prefix; omit to keep the chart default (Euro). */
+  rateCurrency?: DetailedCompetitorRateCurrency;
 }
 
 export function RateCandlestickChart({
@@ -57,7 +62,8 @@ export function RateCandlestickChart({
   roomType,
   drawerInclusionPlanNames,
   ratePlan,
-  events
+  events,
+  rateCurrency
 }: CandlestickChartProps) {
   const [showDetailedView, setShowDetailedView] = useState(false);
 
@@ -263,6 +269,7 @@ export function RateCandlestickChart({
           editableYourRates={!!onYourRatesChange}
           onYourRateChange={onYourRatesChange}
           onClose={() => setShowDetailedView(false)}
+          rateCurrency={rateCurrency}
         />
       )}
     </>
