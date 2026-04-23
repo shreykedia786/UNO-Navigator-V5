@@ -90,7 +90,8 @@ export function PropertyInventoryTable({
   navigatorIntelligenceUnlocked = true,
   onRequestNavigatorTrial,
   lockedNavigatorPreviewDismissed = false,
-  onDismissLockedNavigatorPreview
+  onDismissLockedNavigatorPreview,
+  navigatorTrialRequestSubmitted = false
 }: {
   /** When false, competitor / parity chart rows show an upsell to Navigator trial. */
   navigatorIntelligenceUnlocked?: boolean;
@@ -98,6 +99,8 @@ export function PropertyInventoryTable({
   /** Limited flow only: user hid the locked Navigator preview block for all room types. */
   lockedNavigatorPreviewDismissed?: boolean;
   onDismissLockedNavigatorPreview?: () => void;
+  /** Limited flow: user submitted the trial request form; trial is pending activation (not instant). */
+  navigatorTrialRequestSubmitted?: boolean;
 } = {}) {
   const [isPropertyDetailsExpanded, setIsPropertyDetailsExpanded] = useState(false);
   const [isStandardRoomExpanded, setIsStandardRoomExpanded] = useState(false);
@@ -578,6 +581,7 @@ export function PropertyInventoryTable({
                         dates={dates}
                         onRequestTrial={() => onRequestNavigatorTrial?.()}
                         onDismissPreview={onDismissLockedNavigatorPreview}
+                        trialRequestSubmitted={navigatorTrialRequestSubmitted}
                       />
                     )}
 
@@ -741,6 +745,7 @@ export function PropertyInventoryTable({
                         dates={dates}
                         onRequestTrial={() => onRequestNavigatorTrial?.()}
                         onDismissPreview={onDismissLockedNavigatorPreview}
+                        trialRequestSubmitted={navigatorTrialRequestSubmitted}
                       />
                     )}
 
@@ -898,6 +903,7 @@ export function PropertyInventoryTable({
                         dates={dates}
                         onRequestTrial={() => onRequestNavigatorTrial?.()}
                         onDismissPreview={onDismissLockedNavigatorPreview}
+                        trialRequestSubmitted={navigatorTrialRequestSubmitted}
                       />
                     )}
 

@@ -9,13 +9,14 @@ import { Button } from '@/app/components/ui/button';
 import {
   readNavigatorEntitlement,
   setNavigatorFullSubscriber,
-  startNavigatorTrial,
   navigatorIntelligenceUnlocked,
   trialDaysRemaining,
   applyNavigatorLimitedGateChoice,
   isNavigatorLockedPreviewDismissed,
   dismissNavigatorLockedPreview,
   clearNavigatorLockedPreviewDismiss,
+  hasNavigatorTrialRequestSubmitted,
+  markNavigatorTrialRequestSubmitted,
   type NavigatorEntitlement
 } from '@/app/lib/navigatorEntitlement';
 
@@ -45,12 +46,14 @@ function NavigatorLimitedBanner({
   onStartTrial,
   lockedNavigatorPreviewDismissed,
   onRestoreNavigatorChartPreview,
-  onDismiss
+  onDismiss,
+  trialRequestSubmitted
 }: {
   onStartTrial: () => void;
   lockedNavigatorPreviewDismissed?: boolean;
   onRestoreNavigatorChartPreview?: () => void;
   onDismiss: () => void;
+  trialRequestSubmitted: boolean;
 }) {
   const dismiss = () => {
     try {
@@ -85,10 +88,11 @@ function NavigatorLimitedBanner({
             type="button"
             size="sm"
             variant="outline"
-            className="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded border border-white bg-transparent px-4 text-[14px] font-medium text-white shadow-none hover:bg-white/10 hover:text-white sm:w-auto"
+            disabled={trialRequestSubmitted}
+            className="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded border border-white bg-transparent px-4 text-[14px] font-medium text-white shadow-none hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:border-white/25 disabled:bg-white/[0.04] disabled:text-white/55 disabled:hover:bg-white/[0.04] sm:w-auto"
             onClick={onStartTrial}
           >
-            Start your free 30-day trial
+            {trialRequestSubmitted ? 'Request already sent' : 'Start your free 30-day trial'}
           </Button>
           {lockedNavigatorPreviewDismissed && onRestoreNavigatorChartPreview ? (
             <button
@@ -110,6 +114,7 @@ export default function App() {
   const [entitlement, setEntitlement] = useState<NavigatorEntitlement>(() => readNavigatorEntitlement());
   const [showOnboardingTour, setShowOnboardingTour] = useState(false);
   const [trialModalOpen, setTrialModalOpen] = useState(false);
+  const [trialRequestSubmitted, setTrialRequestSubmitted] = useState(() => hasNavigatorTrialRequestSubmitted());
   const [lockedNavigatorPreviewDismissed, setLockedNavigatorPreviewDismissed] = useState(
     () => isNavigatorLockedPreviewDismissed()
   );
@@ -166,14 +171,14 @@ export default function App() {
     setAccessScreen('main');
   };
 
-  const activateTrial = () => {
+  const handleTrialRequestSubmitted = useCallback(() => {
+    markNavigatorTrialRequestSubmitted();
+    setTrialRequestSubmitted(true);
     clearNavigatorLockedPreviewDismiss();
     setLockedNavigatorPreviewDismissed(false);
     setPreviewDismissGuidanceVisible(false);
-    startNavigatorTrial();
     syncEntitlement();
-    setTrialModalOpen(false);
-  };
+  }, [syncEntitlement]);
 
   /** Not subscribed: stay in UNO Rates & Inventory; intelligence stays off until trial or paid Navigator. */
   const enterMainWithoutNavigator = () => {
@@ -244,10 +249,13 @@ export default function App() {
     <div className="min-h-screen bg-[#f5f5f5] w-full">
       {entitlement === 'limited' && !limitedBannerDismissed ? (
         <NavigatorLimitedBanner
-          onStartTrial={() => setTrialModalOpen(true)}
+          onStartTrial={() => {
+            if (!trialRequestSubmitted) setTrialModalOpen(true);
+          }}
           lockedNavigatorPreviewDismissed={lockedNavigatorPreviewDismissed}
           onRestoreNavigatorChartPreview={handleRestoreLockedNavigatorPreview}
           onDismiss={handleLimitedBannerDismiss}
+          trialRequestSubmitted={trialRequestSubmitted}
         />
       ) : null}
       {entitlement === 'limited' &&
@@ -299,11 +307,14 @@ export default function App() {
       <div className="w-full max-w-[1440px] mx-auto px-[50px] mt-6">
         <PropertyInventoryTable
           navigatorIntelligenceUnlocked={intelligenceOn}
-          onRequestNavigatorTrial={() => setTrialModalOpen(true)}
+          onRequestNavigatorTrial={() => {
+            if (!trialRequestSubmitted) setTrialModalOpen(true);
+          }}
           lockedNavigatorPreviewDismissed={entitlement === 'limited' ? lockedNavigatorPreviewDismissed : false}
           onDismissLockedNavigatorPreview={
             entitlement === 'limited' ? handleDismissLockedNavigatorPreview : undefined
           }
+          navigatorTrialRequestSubmitted={trialRequestSubmitted}
         />
       </div>
 
@@ -315,7 +326,7 @@ export default function App() {
         />
       )}
 
-      <StartFreeTrialModal open={trialModalOpen} onOpenChange={setTrialModalOpen} onSuccess={activateTrial} />
+      <StartFreeTrialModal open={trialModalOpen} onOpenChange={setTrialModalOpen} onSuccess={handleTrialRequestSubmitted} />
     </div>
   );
 }

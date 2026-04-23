@@ -8,12 +8,14 @@ type NavigatorIntelligenceLockedRowProps = {
   onRequestTrial: () => void;
   /** Limited / not-subscribed only: hide the whole preview block (persisted via parent + localStorage). */
   onDismissPreview?: () => void;
+  trialRequestSubmitted?: boolean;
 };
 
 export function NavigatorIntelligenceLockedRow({
   dates,
   onRequestTrial,
-  onDismissPreview
+  onDismissPreview,
+  trialRequestSubmitted = false
 }: NavigatorIntelligenceLockedRowProps) {
   const colSpan = 2 + dates.length;
 
@@ -61,6 +63,7 @@ export function NavigatorIntelligenceLockedRow({
               notSubscribedLead
               onRequestTrial={onRequestTrial}
               onDismissPreview={onDismissPreview}
+              trialRequestSubmitted={trialRequestSubmitted}
             />
           </div>
         </div>

@@ -683,13 +683,18 @@ type NavigatorIntelligenceTeaserImageProps = {
   notSubscribedLead?: boolean;
   /** Limited flow: hide the whole preview block; copy references the top Navigator banner. */
   onDismissPreview?: () => void;
+  /** After submitting the 30-day trial form: primary CTA shows request sent; access is not instant. */
+  trialRequestSubmitted?: boolean;
 };
+
+const SUPPORT_EMAIL = 'help@rategain.com';
 
 export function NavigatorIntelligenceTeaserImage({
   className,
   onRequestTrial,
   notSubscribedLead = false,
-  onDismissPreview
+  onDismissPreview,
+  trialRequestSubmitted = false
 }: NavigatorIntelligenceTeaserImageProps) {
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [demoThanksOpen, setDemoThanksOpen] = useState(false);
@@ -758,14 +763,21 @@ export function NavigatorIntelligenceTeaserImage({
           <div className="flex w-full gap-2">
             <Button
               type="button"
-              aria-label="Start your 30-day free trial to unlock competitor insights"
+              disabled={trialRequestSubmitted}
+              aria-label={
+                trialRequestSubmitted
+                  ? 'Trial request already submitted; our team will enable access after review'
+                  : 'Start your 30-day free trial to unlock competitor insights'
+              }
               onClick={(e) => {
                 e.stopPropagation();
-                onRequestTrial();
+                if (!trialRequestSubmitted) onRequestTrial();
               }}
-              className="inline-flex h-9 min-h-9 flex-1 min-w-0 items-center justify-center bg-[#2753eb] px-2 py-1.5 text-center text-[10px] font-semibold leading-tight text-white shadow-md hover:bg-[#1e45c7] sm:h-10 sm:text-[11px]"
+              className="inline-flex h-9 min-h-9 flex-1 min-w-0 items-center justify-center bg-[#2753eb] px-2 py-1.5 text-center text-[10px] font-semibold leading-tight text-white shadow-md hover:bg-[#1e45c7] disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-white/90 disabled:shadow-none disabled:hover:bg-slate-600 sm:h-10 sm:text-[11px]"
             >
-              <span className="min-w-0 px-0.5">Start 30 days free trial</span>
+              <span className="min-w-0 px-0.5">
+                {trialRequestSubmitted ? 'Request already sent' : 'Start 30 days free trial'}
+              </span>
             </Button>
             <Button
               type="button"
@@ -781,7 +793,20 @@ export function NavigatorIntelligenceTeaserImage({
             </Button>
           </div>
           <p className="text-center text-[11px] leading-snug text-white/90 sm:text-[12px]">
-            Snapshot of competitor pricing &amp; parity — your live UNO rates stay as they are.
+            {trialRequestSubmitted ? (
+              <>
+                We&apos;ve received your trial request. Navigator access is turned on by our team after review, so it
+                won&apos;t appear immediately. The snapshot below stays illustrative. Questions?{' '}
+                <a
+                  href={`mailto:${SUPPORT_EMAIL}`}
+                  className="font-semibold text-white underline decoration-white/45 underline-offset-2 transition-colors hover:decoration-white"
+                >
+                  {SUPPORT_EMAIL}
+                </a>
+              </>
+            ) : (
+              <>Snapshot of competitor pricing &amp; parity — your live UNO rates stay as they are.</>
+            )}
           </p>
           {onDismissPreview ? (
             <div className="pointer-events-auto border-t border-white/15 pt-2">
