@@ -21,7 +21,9 @@ import {
   ensureExpiredTrialSampleInStorage,
   isNavigatorLimitedUpsell,
   markNavigatorGateCompleted,
+  startNavigatorTrial,
   STORAGE_SUBSCRIBED,
+  STORAGE_TRIAL_START,
   type NavigatorEntitlement
 } from '@/app/lib/navigatorEntitlement';
 
@@ -32,14 +34,35 @@ function initialAccessScreen(): AccessScreen {
   return 'gate';
 }
 
-function NavigatorTrialBanner() {
+/**
+ * Navigator access with an active trial window (`STORAGE_TRIAL_START` within 30 days): same top strip as limited
+ * upsell (dark gradient), so users see how many days remain before upgrading.
+ */
+function NavigatorTrialBanner({ onUpgrade }: { onUpgrade: () => void }) {
   const left = trialDaysRemaining();
-  if (left == null) return null;
+  if (left == null || left < 1) return null;
   return (
-    <div className="navigator-top-strip w-full border-b border-[#1e45c7]/30 bg-gradient-to-r from-[#2753eb] via-[#3d5afe] to-[#5c6bc0] px-4 py-2 text-center text-[13px] font-medium text-white shadow-sm">
-      <span className="opacity-95">Navigator trial active — </span>
-      <strong className="font-semibold">{left} day{left === 1 ? '' : 's'} left</strong>
-      <span className="opacity-95"> of full competitor &amp; parity analysis.</span>
+    <div className="navigator-top-strip relative w-full shrink-0 border-b border-white/10 bg-gradient-to-r from-[#001533] to-[#23508a] px-4 py-2.5 text-[14px] sm:px-[50px]">
+      <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-center gap-2 text-center sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3 sm:gap-y-2 sm:text-left">
+        <p className="max-w-[920px] font-normal leading-snug text-white/95 sm:leading-tight">
+          You have <strong className="font-semibold text-white">{left}</strong> day{left === 1 ? '' : 's'} left in your
+          trial. Compare your rates with competitors and track parity before it ends.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:shrink-0">
+          <span className="hidden select-none text-white/80 sm:inline" aria-hidden>
+            —
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded border border-white bg-transparent px-4 text-[14px] font-medium text-white shadow-none hover:bg-white/10 hover:text-white sm:w-auto"
+            onClick={onUpgrade}
+          >
+            Upgrade anytime
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -187,6 +210,13 @@ export default function App() {
       /* ignore */
     }
     setLimitedBannerDismissed(false);
+    try {
+      if (!localStorage.getItem(STORAGE_TRIAL_START)) {
+        startNavigatorTrial();
+      }
+    } catch {
+      /* ignore */
+    }
     setNavigatorFullSubscriber();
     syncEntitlement();
     setAccessScreen('main');
@@ -360,7 +390,9 @@ export default function App() {
           </div>
         </div>
       ) : null}
-      {entitlement === 'trial' ? <NavigatorTrialBanner /> : null}
+      {navigatorIntelligenceUnlocked(entitlement) && trialDaysRemaining() != null ? (
+        <NavigatorTrialBanner onUpgrade={() => setNavigatorUpgradeModalOpen(true)} />
+      ) : null}
       <Header
         onUnoLogoClick={() => {
           setTrialModalOpen(false);
