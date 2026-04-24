@@ -54,6 +54,11 @@ interface CandlestickChartProps {
   } | null>;
   /** Drawer uses this for the header label and amount prefix; omit to keep the chart default (Euro). */
   rateCurrency?: DetailedCompetitorRateCurrency;
+  /**
+   * First date column index (0-based) with no Navigator competitor/parity (UNO range beyond 1-year limit).
+   * `null` = all columns have Navigator data.
+   */
+  navigatorUnavailableFromIndex?: number | null;
 }
 
 export function RateCandlestickChart({
@@ -68,7 +73,8 @@ export function RateCandlestickChart({
   drawerInclusionPlanNames,
   ratePlan,
   events,
-  rateCurrency
+  rateCurrency,
+  navigatorUnavailableFromIndex = null
 }: CandlestickChartProps) {
   const [showDetailedView, setShowDetailedView] = useState(false);
   const currencySymbol = (rateCurrency ?? DEFAULT_DETAILED_COMPETITOR_RATE_CURRENCY).symbol;
@@ -263,6 +269,11 @@ export function RateCandlestickChart({
           const prevMyRateY = prevData ? valueToY(prevData.rate) : null;
           const nextMyRateY = nextData ? valueToY(nextData.rate) : null;
 
+          const isNavUnavailable =
+            navigatorUnavailableFromIndex != null && idx >= navigatorUnavailableFromIndex;
+          const isNavUnavailableAt = (i: number) =>
+            navigatorUnavailableFromIndex != null && i >= navigatorUnavailableFromIndex;
+
           return (
             <ChartColumn
               key={idx}
@@ -274,12 +285,13 @@ export function RateCandlestickChart({
               minY={minY}
               prevMyRateY={prevMyRateY}
               nextMyRateY={nextMyRateY}
-              hasPrev={!!prevData}
-              hasNext={!!nextData}
+              hasPrev={!!prevData && !isNavUnavailableAt(idx) && !isNavUnavailableAt(idx - 1)}
+              hasNext={!!nextData && !isNavUnavailableAt(idx) && !isNavUnavailableAt(idx + 1)}
               chartHeight={chartHeight}
               dataTour={idx === 0 ? 'rate-chart' : undefined}
               currencySymbol={currencySymbol}
               roomTitle={roomType}
+              navigatorUnavailable={isNavUnavailable}
             />
           );
         })}
@@ -299,6 +311,7 @@ export function RateCandlestickChart({
           onYourRateChange={onYourRatesChange}
           onClose={() => setShowDetailedView(false)}
           rateCurrency={rateCurrency}
+          navigatorUnavailableFromIndex={navigatorUnavailableFromIndex}
         />
       )}
     </>
@@ -333,7 +346,8 @@ function ChartColumn({
   chartHeight,
   dataTour,
   currencySymbol,
-  roomTitle
+  roomTitle,
+  navigatorUnavailable = false
 }: {
   columnIndex: number;
   data: {
@@ -360,6 +374,8 @@ function ChartColumn({
   currencySymbol: string;
   /** Room / product context — shown in tooltip header with the date. */
   roomTitle?: string;
+  /** No Navigator competitor/parity for this column (UNO range past 365-day product limit). */
+  navigatorUnavailable?: boolean;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [tooltipLayout, setTooltipLayout] = useState<{
@@ -637,6 +653,26 @@ function ChartColumn({
       )}
     </div>
   );
+
+  if (navigatorUnavailable) {
+    return (
+      <td
+        className="relative border-r border-[#e0e0e0] bg-slate-100/95 px-0 py-2 align-middle"
+        data-tour={dataTour}
+        title="Navigator does not provide competitor or parity data for this date in your selected range."
+      >
+        <div
+          className="mx-auto flex h-[112px] max-w-[4.5rem] flex-col items-center justify-center gap-0.5 bg-[repeating-linear-gradient(-45deg,#e2e8f0,#e2e8f0_4px,#f1f5f9_4px,#f1f5f9_8px)] px-1 text-center"
+          style={{ minHeight: chartHeight }}
+        >
+          <span className="text-[8px] font-semibold uppercase leading-tight tracking-wide text-slate-600">
+            No Navigator data
+          </span>
+          <span className="text-[8px] leading-tight text-slate-500">Outside coverage</span>
+        </div>
+      </td>
+    );
+  }
 
   return (
     <td

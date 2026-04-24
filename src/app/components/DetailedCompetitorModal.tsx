@@ -22,6 +22,7 @@ import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { cn } from './ui/utils';
 import { PARITY_PALETTE, PARITY_SEGMENT_PERCENT_CLASS } from '@/app/lib/parityPalette';
+import { navigatorOutsideCoverageTooltipBody } from '@/app/lib/navigatorDateCoverage';
 
 const DEFAULT_INCLUSION_PLAN_NAMES = [
   'Advance Purchase (Non-Refundable)',
@@ -342,6 +343,40 @@ function InsightHoverTooltip({
           document.body
         )}
     </>
+  );
+}
+
+/** Explains em dashes when a column is past Navigator’s 365-day window — same chrome as other drawer tooltips. */
+function NavigatorOutsideCoverageTooltip({
+  title,
+  dateLabel,
+  children,
+  triggerClassName
+}: {
+  title: string;
+  dateLabel: string;
+  children: ReactNode;
+  triggerClassName?: string;
+}) {
+  return (
+    <InsightHoverTooltip
+      title={title}
+      dateLabel={dateLabel}
+      visual="elevated"
+      panelWidth={300}
+      estimatedHeight={175}
+      triggerClassName={
+        triggerClassName ??
+        'relative flex min-h-[1.25rem] w-full min-w-0 items-center justify-center py-0.5'
+      }
+      body={
+        <p className="m-0 whitespace-pre-line text-[11px] leading-snug text-slate-600">
+          {navigatorOutsideCoverageTooltipBody()}
+        </p>
+      }
+    >
+      {children}
+    </InsightHoverTooltip>
   );
 }
 
@@ -690,6 +725,8 @@ function CompetitorRateInsightCell({
   dateLabel,
   currencySymbol,
   showTooltipRatePlanNames,
+  /** When true, null rate means outside Navigator window — show em dash (not “Sold Out”). */
+  navigatorUnavailableForDate = false,
   children
 }: {
   compRate: number | null;
@@ -700,9 +737,17 @@ function CompetitorRateInsightCell({
   currencySymbol: string;
   /** Match parity tab: show inclusion plan copy only when filter is Any (lowest rateplan). */
   showTooltipRatePlanNames: boolean;
+  navigatorUnavailableForDate?: boolean;
   children: ReactNode;
 }) {
   if (compRate === null) {
+    if (navigatorUnavailableForDate) {
+      return (
+        <NavigatorOutsideCoverageTooltip title={competitorName} dateLabel={dateLabel}>
+          <span className="cursor-default text-[13px] font-normal text-slate-500">—</span>
+        </NavigatorOutsideCoverageTooltip>
+      );
+    }
     return <span className="text-gray-400 text-[13px]">Sold Out</span>;
   }
 
@@ -740,7 +785,9 @@ function YourRatesRowTooltipCell({
   detailSlot,
   children,
   elevatedTooltip = false,
-  showTooltipRatePlanNames = true
+  showTooltipRatePlanNames = true,
+  /** Outside Navigator coverage: your rate is not sourced — show dash, no rate tooltip. */
+  navigatorNoData = false
 }: {
   roomTitle: string;
   dateLabel: string;
@@ -755,7 +802,20 @@ function YourRatesRowTooltipCell({
   elevatedTooltip?: boolean;
   /** When elevated: show inclusion block under rate (same rule as OTA tooltips). */
   showTooltipRatePlanNames?: boolean;
+  navigatorNoData?: boolean;
 }) {
+  if (navigatorNoData) {
+    return (
+      <NavigatorOutsideCoverageTooltip
+        title={roomTitle}
+        dateLabel={dateLabel}
+        triggerClassName="relative flex min-h-[1.75rem] w-full min-w-0 items-center justify-center py-0.5"
+      >
+        <span className="cursor-default font-normal tabular-nums text-slate-500">—</span>
+      </NavigatorOutsideCoverageTooltip>
+    );
+  }
+
   if (elevatedTooltip) {
     return (
       <InsightHoverTooltip
@@ -863,6 +923,8 @@ interface DetailedCompetitorModalProps {
   onClose: () => void;
   /** When omitted, defaults to Euro — pass explicit USD/AUD etc. so "$" is not ambiguous. */
   rateCurrency?: DetailedCompetitorRateCurrency;
+  /** First global date index with no Navigator market data (`null` = entire range covered). */
+  navigatorUnavailableFromIndex?: number | null;
 }
 
 /** Compset rows in the Competitor tab table — same list powers the Compsets dropdown. */
@@ -1033,6 +1095,23 @@ function CompsetPickerDropdown({
   );
 }
 
+/**
+ * Choose `dateOffset` so the first visible window includes both days inside and outside Navigator coverage
+ * (before and from `navigatorUnavailableFromIndex`), when the drawer opens on an extended UNO range demo.
+ */
+function initialDrawerOffsetStraddlingNavigatorLimit(
+  totalDates: number,
+  navigatorUnavailableFromIndex: number,
+  datesToShow: number
+): number {
+  if (totalDates <= 0 || datesToShow <= 0 || datesToShow >= totalDates) return 0;
+  const u = navigatorUnavailableFromIndex;
+  if (u <= 0 || u >= totalDates) return 0;
+  const minO = Math.max(0, u - datesToShow + 1);
+  const maxO = Math.max(0, totalDates - datesToShow);
+  return Math.min(Math.max(minO, 0), maxO);
+}
+
 export function DetailedCompetitorModal({
   dates,
   rates,
@@ -1044,7 +1123,8 @@ export function DetailedCompetitorModal({
   editableYourRates = false,
   onYourRateChange,
   onClose,
-  rateCurrency: rateCurrencyProp
+  rateCurrency: rateCurrencyProp,
+  navigatorUnavailableFromIndex = null
 }: DetailedCompetitorModalProps) {
   const rateCurrency = rateCurrencyProp ?? DEFAULT_DETAILED_COMPETITOR_RATE_CURRENCY;
   const currencySymbol = rateCurrency.symbol;
@@ -1113,6 +1193,14 @@ export function DetailedCompetitorModal({
   // Number of dates to show at once - 7 for parity, 10 for competitor
   const DATES_TO_SHOW = activeTab === 'parity' ? 7 : 10;
 
+  useLayoutEffect(() => {
+    if (navigatorUnavailableFromIndex == null) return;
+    const show = activeTab === 'parity' ? 7 : 10;
+    setDateOffset(
+      initialDrawerOffsetStraddlingNavigatorLimit(dates.length, navigatorUnavailableFromIndex, show)
+    );
+  }, [navigatorUnavailableFromIndex, dates.length, activeTab]);
+
   // Calculate visible data based on offset
   const visibleDates = dates.slice(dateOffset, dateOffset + DATES_TO_SHOW);
   const visibleRates = rates.slice(dateOffset, dateOffset + DATES_TO_SHOW);
@@ -1142,6 +1230,9 @@ export function DetailedCompetitorModal({
    */
   const getCompetitorRateForDate = useCallback(
     (competitorIndex: number, dateIndex: number, _myRate: number) => {
+      if (navigatorUnavailableFromIndex != null && dateIndex >= navigatorUnavailableFromIndex) {
+        return null;
+      }
       const seed = competitorIndex * 1000 + dateIndex;
       const dateData = chartData[dateIndex];
       if (!dateData) return null;
@@ -1168,7 +1259,7 @@ export function DetailedCompetitorModal({
 
       return rate;
     },
-    [chartData, inclusionFilter, channelFilter, activeTab]
+    [chartData, inclusionFilter, channelFilter, activeTab, navigatorUnavailableFromIndex]
   );
 
   /** Rate plan driving the simulated channel rate for a parity matrix cell. */
@@ -1417,8 +1508,22 @@ export function DetailedCompetitorModal({
                         {visibleDates.map((date, idx) => {
                           const isFirst = idx === 0;
                           const isLast = idx === visibleDates.length - 1;
+                          const g = dateOffset + idx;
+                          const navOut =
+                            navigatorUnavailableFromIndex != null && g >= navigatorUnavailableFromIndex;
                           return (
-                            <th key={idx} className="px-3 py-2.5 border-r border-[#e0e0e0] bg-[#f5f5f5]">
+                            <th
+                              key={idx}
+                              title={
+                                navOut
+                                  ? 'No Navigator competitor data for this date — outside the 365-day coverage window.'
+                                  : undefined
+                              }
+                              className={cn(
+                                'px-3 py-2.5 border-r border-[#e0e0e0]',
+                                navOut ? 'bg-slate-200/95' : 'bg-[#f5f5f5]'
+                              )}
+                            >
                               <div
                                 className={cn(
                                   'flex items-center justify-center gap-1',
@@ -1467,40 +1572,66 @@ export function DetailedCompetitorModal({
                 {visibleRates.map((rate, idx) => {
                   const globalIdx = dateOffset + idx;
                   const soldOut = rate === 0 || !rate;
+                  const navOut =
+                    navigatorUnavailableFromIndex != null && globalIdx >= navigatorUnavailableFromIndex;
 
                   return (
-                    <td key={idx} className="px-3 py-2 text-center text-[13px] font-semibold border-r border-[#e0e0e0]">
-                      <YourRatesRowTooltipCell
-                        roomTitle={roomType}
-                        dateLabel={
-                          visibleDates[idx] ? formatInsightDate(visibleDates[idx]) : ''
-                        }
-                        yourRate={rate}
-                        soldOut={soldOut}
-                        inclusionPlanName={resolveTooltipInclusionPlan(0, globalIdx)}
-                        currencySymbol={currencySymbol}
-                        elevatedTooltip
-                        showTooltipRatePlanNames={inclusionFilter === 'any'}
-                      >
-                        {editableYourRates && onYourRateChange ? (
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            autoComplete="off"
-                            aria-label={`Your rate ${visibleDates[idx]?.day} ${visibleDates[idx]?.date} ${visibleDates[idx]?.month}`}
-                            value={rate === 0 ? '' : String(rate)}
-                            onChange={(e) => onYourRateChange(globalIdx, e.target.value)}
-                            className="mx-auto block w-[3.25rem] h-7 text-center text-[11px] border border-[#d0d0d0] rounded-full bg-white tabular-nums font-semibold text-[#333333]"
-                          />
-                        ) : soldOut ? (
-                          <span className="text-gray-400 font-normal">Sold Out</span>
-                        ) : (
-                          <span className="text-[#333333]">
-                            {currencySymbol}
-                            {rate}
-                          </span>
-                        )}
-                      </YourRatesRowTooltipCell>
+                    <td
+                      key={idx}
+                      className={cn(
+                        'px-3 py-2 text-center text-[13px] font-semibold border-r border-[#e0e0e0]',
+                        navOut && 'bg-slate-50/90'
+                      )}
+                    >
+                      {navOut ? (
+                        <YourRatesRowTooltipCell
+                          roomTitle={roomType}
+                          dateLabel={
+                            visibleDates[idx] ? formatInsightDate(visibleDates[idx]) : ''
+                          }
+                          yourRate={rate}
+                          soldOut={false}
+                          inclusionPlanName={resolveTooltipInclusionPlan(0, globalIdx)}
+                          currencySymbol={currencySymbol}
+                          elevatedTooltip
+                          showTooltipRatePlanNames={inclusionFilter === 'any'}
+                          navigatorNoData
+                        >
+                          —
+                        </YourRatesRowTooltipCell>
+                      ) : (
+                        <YourRatesRowTooltipCell
+                          roomTitle={roomType}
+                          dateLabel={
+                            visibleDates[idx] ? formatInsightDate(visibleDates[idx]) : ''
+                          }
+                          yourRate={rate}
+                          soldOut={soldOut}
+                          inclusionPlanName={resolveTooltipInclusionPlan(0, globalIdx)}
+                          currencySymbol={currencySymbol}
+                          elevatedTooltip
+                          showTooltipRatePlanNames={inclusionFilter === 'any'}
+                        >
+                          {editableYourRates && onYourRateChange ? (
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              autoComplete="off"
+                              aria-label={`Your rate ${visibleDates[idx]?.day} ${visibleDates[idx]?.date} ${visibleDates[idx]?.month}`}
+                              value={rate === 0 ? '' : String(rate)}
+                              onChange={(e) => onYourRateChange(globalIdx, e.target.value)}
+                              className="mx-auto block w-[3.25rem] h-7 text-center text-[11px] border border-[#d0d0d0] rounded-full bg-white tabular-nums font-semibold text-[#333333]"
+                            />
+                          ) : soldOut ? (
+                            <span className="text-gray-400 font-normal">Sold Out</span>
+                          ) : (
+                            <span className="text-[#333333]">
+                              {currencySymbol}
+                              {rate}
+                            </span>
+                          )}
+                        </YourRatesRowTooltipCell>
+                      )}
                     </td>
                   );
                 })}
@@ -1537,11 +1668,15 @@ export function DetailedCompetitorModal({
                   </div>
                 </td>
                 {visibleChartData.map((data, idx) => {
+                  const globalIdx = dateOffset + idx;
+                  const isNavUnavailableAt = (g: number) =>
+                    navigatorUnavailableFromIndex != null && g >= navigatorUnavailableFromIndex;
+                  const navUnavail = isNavUnavailableAt(globalIdx);
+
                   const myRateY = valueToY(data.rate);
                   const maxY = valueToY(data.max);
                   const minY = valueToY(data.min);
-                  
-                  // Get previous and next points for line connection
+
                   const prevData = idx > 0 ? visibleChartData[idx - 1] : null;
                   const nextData = visibleChartData[idx + 1];
                   const prevMyRateY = prevData ? valueToY(prevData.rate) : null;
@@ -1560,10 +1695,15 @@ export function DetailedCompetitorModal({
                           minY={minY}
                           prevMyRateY={prevMyRateY}
                           nextMyRateY={nextMyRateY}
-                          hasPrev={!!prevData}
-                          hasNext={!!nextData}
+                          hasPrev={
+                            !!prevData && !isNavUnavailableAt(globalIdx) && !isNavUnavailableAt(globalIdx - 1)
+                          }
+                          hasNext={
+                            !!nextData && !isNavUnavailableAt(globalIdx) && !isNavUnavailableAt(globalIdx + 1)
+                          }
                           hasEvent={hasEvent(idx)}
                           currencySymbol={currencySymbol}
+                          navigatorUnavailable={navUnavail}
                         />
                       </div>
                     </td>
@@ -1578,6 +1718,12 @@ export function DetailedCompetitorModal({
                         </td>
                         {visibleRates.map((_myRate, dateIdx) => {
                           const avgRate = avgCompsetPerDate[dateIdx];
+                          const g = dateOffset + dateIdx;
+                          const navOut =
+                            navigatorUnavailableFromIndex != null && g >= navigatorUnavailableFromIndex;
+                          const avgDateLabel = visibleDates[dateIdx]
+                            ? formatInsightDate(visibleDates[dateIdx])
+                            : '';
 
                           return (
                             <td
@@ -1585,7 +1731,18 @@ export function DetailedCompetitorModal({
                               className="border-r border-[#d4d8de] bg-[#e2e5ea] px-3 py-3 text-center text-[14px] font-semibold"
                             >
                               {avgRate === null ? (
-                                <span className="text-[13px] font-normal text-gray-400">N/A</span>
+                                navOut ? (
+                                  <NavigatorOutsideCoverageTooltip
+                                    title="Avg. Compset Rates"
+                                    dateLabel={avgDateLabel}
+                                  >
+                                    <span className="cursor-default text-[13px] font-normal text-slate-500">
+                                      —
+                                    </span>
+                                  </NavigatorOutsideCoverageTooltip>
+                                ) : (
+                                  <span className="text-[13px] font-normal text-slate-500">—</span>
+                                )
                               ) : (
                                 <span className="text-black">
                                   {currencySymbol}
@@ -1623,6 +1780,9 @@ export function DetailedCompetitorModal({
                             {visibleRates.map((_myRate, dateIdx) => {
                               const compRate = competitorRatesMatrix[dateIdx][compIdx];
                               const actualMinMax = actualMinMaxPerDate[dateIdx];
+                              const g = dateOffset + dateIdx;
+                              const navUnavail =
+                                navigatorUnavailableFromIndex != null && g >= navigatorUnavailableFromIndex;
                               const isMaxRate =
                                 compRate !== null &&
                                 actualMinMax.max !== null &&
@@ -1652,6 +1812,7 @@ export function DetailedCompetitorModal({
                                     }
                                     currencySymbol={currencySymbol}
                                     showTooltipRatePlanNames={inclusionFilter === 'any'}
+                                    navigatorUnavailableForDate={navUnavail}
                                   >
                                     {compRate === null ? null : isMaxRate ? (
                                       <span className="text-[14px] font-bold text-[#f44336]">
@@ -1699,6 +1860,7 @@ export function DetailedCompetitorModal({
               onDateNavigateNext={handleNext}
               canNavigatePrevious={canGoPrevious}
               canNavigateNext={canGoNext}
+              navigatorUnavailableFromIndex={navigatorUnavailableFromIndex}
             />
           )}
         </div>
@@ -1753,7 +1915,8 @@ function ParityAnalysisContent({
   onDateNavigatePrevious,
   onDateNavigateNext,
   canNavigatePrevious,
-  canNavigateNext
+  canNavigateNext,
+  navigatorUnavailableFromIndex = null
 }: {
   visibleDates: Array<{ day: string; date: string; month: string }>;
   visibleRates: number[];
@@ -1769,8 +1932,12 @@ function ParityAnalysisContent({
   onDateNavigateNext: () => void;
   canNavigatePrevious: boolean;
   canNavigateNext: boolean;
+  navigatorUnavailableFromIndex?: number | null;
 }) {
   const currencySymbol = rateCurrency.symbol;
+
+  const isNavUnavailableAt = (globalIdx: number) =>
+    navigatorUnavailableFromIndex != null && globalIdx >= navigatorUnavailableFromIndex;
 
   // Channel names matching the screenshot structure
   const channelNames = [
@@ -2058,8 +2225,21 @@ function ParityAnalysisContent({
             {visibleDates.map((date, idx) => {
               const isFirst = idx === 0;
               const isLast = idx === visibleDates.length - 1;
+              const g = dateOffset + idx;
+              const navOut = isNavUnavailableAt(g);
               return (
-                <th key={idx} className="px-2 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
+                <th
+                  key={idx}
+                  title={
+                    navOut
+                      ? 'No Navigator parity for this date — past the 365-day market-data window from your range start.'
+                      : undefined
+                  }
+                  className={cn(
+                    'px-2 py-3 border-r border-[#e0e0e0]',
+                    navOut ? 'bg-slate-200/95' : 'bg-[#f5f5f5]'
+                  )}
+                >
                   <div
                     className={cn(
                       'flex items-center justify-center gap-1',
@@ -2158,11 +2338,30 @@ function ParityAnalysisContent({
               </div>
             </td>
             {visibleDates.map((_, idx) => {
-              const parityPercent = getDateParityPercentage(idx);
+              const g = dateOffset + idx;
+              const navOut = isNavUnavailableAt(g);
+              const parityPercent = navOut ? null : getDateParityPercentage(idx);
               return (
-                <td key={idx} className="px-2 py-3.5 border-r border-[#d4d8de] bg-[#e2e5ea]">
+                <td
+                  key={idx}
+                  className={cn(
+                    'px-2 py-3.5 border-r border-[#d4d8de]',
+                    navOut ? 'bg-slate-200/85' : 'bg-[#e2e5ea]'
+                  )}
+                >
                   <div className="text-center text-[13px] font-semibold tabular-nums text-[#333333]">
-                    {parityPercent}%
+                    {navOut ? (
+                      <NavigatorOutsideCoverageTooltip
+                        title="Overall Parity %"
+                        dateLabel={
+                          visibleDates[idx] ? formatInsightDate(visibleDates[idx]) : ''
+                        }
+                      >
+                        <span className="cursor-default font-normal text-slate-500">—</span>
+                      </NavigatorOutsideCoverageTooltip>
+                    ) : (
+                      `${parityPercent}%`
+                    )}
                   </div>
                 </td>
               );
@@ -2184,7 +2383,10 @@ function ParityAnalysisContent({
             {parityRates.map((rate, idx) => {
               const globalIdx = dateOffset + idx;
               const soldOut = rate === 0 || !rate;
-              const { bg, text } = getYourRateParityColumnTint(idx, rate);
+              const navOut = isNavUnavailableAt(globalIdx);
+              const { bg, text } = navOut
+                ? { bg: '#f1f5f9', text: '#475569' as const }
+                : getYourRateParityColumnTint(idx, rate);
               const dateLabel = visibleDates[idx] ? formatInsightDate(visibleDates[idx]) : '';
 
               return (
@@ -2193,27 +2395,43 @@ function ParityAnalysisContent({
                   className="px-2 py-3.5 text-center text-[13px] font-semibold border-r border-[#e0e0e0]"
                   style={{ backgroundColor: bg }}
                 >
-                  <YourRatesRowTooltipCell
-                    roomTitle={roomType}
-                    dateLabel={dateLabel}
-                    yourRate={rate}
-                    soldOut={soldOut}
-                    inclusionPlanName={resolveParityYourRatePlan(globalIdx)}
-                    currencySymbol={currencySymbol}
-                    elevatedTooltip
-                    showTooltipRatePlanNames={showTooltipRatePlanNames}
-                  >
-                    {soldOut ? (
-                      <span className="font-normal" style={{ color: text }}>
-                        Sold Out
-                      </span>
-                    ) : (
-                      <span style={{ color: text }}>
-                        {currencySymbol}
-                        {rate}
-                      </span>
-                    )}
-                  </YourRatesRowTooltipCell>
+                  {navOut ? (
+                    <YourRatesRowTooltipCell
+                      roomTitle={roomType}
+                      dateLabel={dateLabel}
+                      yourRate={rate}
+                      soldOut={false}
+                      inclusionPlanName={resolveParityYourRatePlan(globalIdx)}
+                      currencySymbol={currencySymbol}
+                      elevatedTooltip
+                      showTooltipRatePlanNames={showTooltipRatePlanNames}
+                      navigatorNoData
+                    >
+                      —
+                    </YourRatesRowTooltipCell>
+                  ) : (
+                    <YourRatesRowTooltipCell
+                      roomTitle={roomType}
+                      dateLabel={dateLabel}
+                      yourRate={rate}
+                      soldOut={soldOut}
+                      inclusionPlanName={resolveParityYourRatePlan(globalIdx)}
+                      currencySymbol={currencySymbol}
+                      elevatedTooltip
+                      showTooltipRatePlanNames={showTooltipRatePlanNames}
+                    >
+                      {soldOut ? (
+                        <span className="font-normal" style={{ color: text }}>
+                          Sold Out
+                        </span>
+                      ) : (
+                        <span style={{ color: text }}>
+                          {currencySymbol}
+                          {rate}
+                        </span>
+                      )}
+                    </YourRatesRowTooltipCell>
+                  )}
                 </td>
               );
             })}
@@ -2297,10 +2515,26 @@ function ParityAnalysisContent({
 
                 {/* Date Cells */}
                 {parityRates.map((myRate, dateIdx) => {
+                  const globalDateIdx = dateOffset + dateIdx;
+                  if (isNavUnavailableAt(globalDateIdx)) {
+                    const dl = visibleDates[dateIdx] ? formatInsightDate(visibleDates[dateIdx]) : '';
+                    return (
+                      <td
+                        key={dateIdx}
+                        className="border-r border-[#e0e0e0] bg-slate-100/90 px-2 py-4 text-center"
+                      >
+                        <NavigatorOutsideCoverageTooltip title={channelName} dateLabel={dl}>
+                          <span className="cursor-default text-[11px] font-normal text-slate-500">
+                            —
+                          </span>
+                        </NavigatorOutsideCoverageTooltip>
+                      </td>
+                    );
+                  }
+
                   const channelRate = getParityChannelRate(channelIdx, dateIdx);
                   const cellDisplay = getCellDisplay(channelRate, myRate, channelIdx, dateIdx);
 
-                  const globalDateIdx = dateOffset + dateIdx;
                   const dateLabel = visibleDates[dateIdx] ? formatInsightDate(visibleDates[dateIdx]) : '';
                   const channelRatePlan = resolveParityCellRatePlan(channelIdx, globalDateIdx);
 
@@ -2461,7 +2695,8 @@ function ChartCell({
   hasPrev,
   hasNext,
   hasEvent,
-  currencySymbol
+  currencySymbol,
+  navigatorUnavailable = false
 }: {
   date: { day: string; date: string; month: string };
   myRate: number;
@@ -2476,9 +2711,29 @@ function ChartCell({
   hasNext: boolean;
   hasEvent: boolean;
   currencySymbol: string;
+  navigatorUnavailable?: boolean;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const chartHeight = 112;
+
+  if (navigatorUnavailable) {
+    return (
+      <div
+        className="relative w-full"
+        title="Navigator competitor and parity data are not available for this date."
+      >
+        <div
+          className="flex w-full flex-col items-center justify-center gap-0.5 rounded border border-slate-200/80 bg-[repeating-linear-gradient(-45deg,#e2e8f0,#e2e8f0_4px,#f8fafc_4px,#f8fafc_8px)] px-1 py-2 text-center"
+          style={{ minHeight: chartHeight }}
+        >
+          <span className="text-[8px] font-semibold uppercase leading-tight text-slate-600">
+            No Navigator data
+          </span>
+          <span className="text-[8px] text-slate-500">Outside coverage</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

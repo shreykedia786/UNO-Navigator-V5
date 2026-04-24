@@ -5,9 +5,25 @@ import imgLogo from "figma:asset/036db285069a2b8b94cc4ad3c602ba0af3a2f1fe.png";
 type HeaderProps = {
   /** When set, clicking the UNO logo runs this (e.g. return to Navigator access gate). */
   onUnoLogoClick?: () => void;
+  /** Main date range label in the filter row (e.g. subscribed demo vs default). */
+  dateRangePrimaryLabel?: string;
+  dateRangeHint?: string;
+  /** Subscribed: show demo toggle for UNO range extending past Navigator’s 1-year limit. */
+  showNavigatorRangeDemo?: boolean;
+  extendedUnoBeyondNavigator?: boolean;
+  onExtendedUnoBeyondNavigatorChange?: (value: boolean) => void;
 };
 
-export function Header({ onUnoLogoClick }: HeaderProps) {
+export function Header({
+  onUnoLogoClick,
+  dateRangePrimaryLabel,
+  dateRangeHint,
+  showNavigatorRangeDemo = false,
+  extendedUnoBeyondNavigator = false,
+  onExtendedUnoBeyondNavigatorChange
+}: HeaderProps) {
+  const rangeLabel = dateRangePrimaryLabel ?? '20 Jan 26 - 19 Feb 26';
+  const rangeHint = dateRangeHint ?? 'Selected for next 30 days';
   const logoInner = (
     <div className="h-[23px] w-[71px] shadow-[0px_0px_1.6px_0px_white]">
       <img alt="UNO Logo" className="size-full object-cover" src={imgLogo} />
@@ -125,9 +141,9 @@ export function Header({ onUnoLogoClick }: HeaderProps) {
               </p>
             </div>
             <div className="flex items-center pb-[3px] w-full border-b-[0.6px] border-[#a8a8a8] h-[30px]">
-              <div className="flex items-center flex-1">
-                <p className="font-normal text-[14px] text-black tracking-[-0.308px] leading-[1.5] whitespace-nowrap">
-                  20 Jan 26 - 19 Feb 26
+              <div className="flex items-center flex-1 min-w-0">
+                <p className="font-normal text-[14px] text-black tracking-[-0.308px] leading-[1.5] truncate" title={rangeLabel}>
+                  {rangeLabel}
                 </p>
               </div>
               <div className="flex items-center justify-center size-[32px]">
@@ -145,10 +161,24 @@ export function Header({ onUnoLogoClick }: HeaderProps) {
                 </div>
               </div>
             </div>
-            <div className="h-[17px] mt-[3px]">
-              <p className="font-normal italic text-[11px] text-[#8a8c9a] tracking-[-0.242px] leading-[1.5]">
-                Selected for next 30 days
-              </p>
+            <div className="mt-[3px] min-h-[17px]">
+              {showNavigatorRangeDemo && onExtendedUnoBeyondNavigatorChange ? (
+                <label className="flex cursor-pointer items-start gap-2">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 size-3.5 shrink-0 rounded border-[#a8a8a8] text-[#2753eb] accent-[#2753eb]"
+                    checked={extendedUnoBeyondNavigator}
+                    onChange={(e) => onExtendedUnoBeyondNavigatorChange(e.target.checked)}
+                  />
+                  <span className="font-normal text-[11px] text-[#5c5f72] tracking-[-0.242px] leading-snug">
+                    {rangeHint}
+                  </span>
+                </label>
+              ) : (
+                <p className="font-normal italic text-[11px] text-[#8a8c9a] tracking-[-0.242px] leading-[1.5]">
+                  {rangeHint}
+                </p>
+              )}
             </div>
           </div>
 

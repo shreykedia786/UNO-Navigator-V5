@@ -172,6 +172,8 @@ export default function App() {
       return false;
     }
   });
+  /** Subscribed demo: UNO date range longer than Navigator’s 365-day competitor/parity window. */
+  const [extendedUnoBeyondNavigator, setExtendedUnoBeyondNavigator] = useState(false);
 
   const handleLimitedBannerDismiss = useCallback(() => {
     setLimitedBannerDismissed(true);
@@ -401,6 +403,7 @@ export default function App() {
           clearNavigatorLockedPreviewDismiss();
           setLockedNavigatorPreviewDismissed(false);
           setPreviewDismissGuidanceVisible(false);
+          setExtendedUnoBeyondNavigator(false);
           try {
             sessionStorage.removeItem(LIMITED_BANNER_DISMISS_KEY);
           } catch {
@@ -410,10 +413,28 @@ export default function App() {
           setEntitlement(readNavigatorEntitlement());
           setAccessScreen('gate');
         }}
+        dateRangePrimaryLabel={
+          intelligenceOn
+            ? extendedUnoBeyondNavigator
+              ? '20 Jan 2026 – 10 Jul 2027'
+              : '20 Jan 2026 – 19 Feb 2026'
+            : undefined
+        }
+        dateRangeHint={
+          intelligenceOn
+            ? extendedUnoBeyondNavigator
+              ? 'UNO range ~18 months (demo). Shaded chart columns: past Navigator’s 1-year data limit.'
+              : 'Selected for next 30 days'
+            : undefined
+        }
+        showNavigatorRangeDemo={intelligenceOn}
+        extendedUnoBeyondNavigator={extendedUnoBeyondNavigator}
+        onExtendedUnoBeyondNavigatorChange={setExtendedUnoBeyondNavigator}
       />
       <div className="w-full max-w-[1440px] mx-auto px-[50px] mt-6">
         <PropertyInventoryTable
           navigatorIntelligenceUnlocked={intelligenceOn}
+          extendedUnoBeyondNavigator={intelligenceOn ? extendedUnoBeyondNavigator : false}
           onRequestNavigatorTrial={() => {
             if (!trialRequestSubmitted) setTrialModalOpen(true);
           }}

@@ -3,6 +3,7 @@ import { ChevronRight, ChevronLeft, Lock, Zap } from 'lucide-react';
 import svgPaths from "../../imports/svg-eqrmta6hqq";
 import { RateCandlestickChart, type RoomLevelCompetitorRates } from './RateCandlestickChart';
 import { NavigatorIntelligenceLockedRow } from './NavigatorIntelligenceLockedRow';
+import { demoNavigatorUnavailableFromColumnIndex } from '@/app/lib/navigatorDateCoverage';
 
 interface DateCell {
   day: string;
@@ -86,8 +87,12 @@ function parseSuiteRateInput(raw: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Demo: first N columns keep Navigator competitor/parity; rest simulate “past 365-day” limit. */
+const NAVIGATOR_DEMO_COVERED_COLUMNS = 10;
+
 export function PropertyInventoryTable({
   navigatorIntelligenceUnlocked = false,
+  extendedUnoBeyondNavigator = false,
   onRequestNavigatorTrial,
   lockedNavigatorPreviewDismissed = false,
   onDismissLockedNavigatorPreview,
@@ -96,6 +101,8 @@ export function PropertyInventoryTable({
 }: {
   /** When false, competitor / parity chart rows show an upsell to Navigator trial. */
   navigatorIntelligenceUnlocked?: boolean;
+  /** Subscribed: UNO range extends beyond Navigator’s 1-year market-data window (demo). */
+  extendedUnoBeyondNavigator?: boolean;
   onRequestNavigatorTrial?: () => void;
   /** Limited flow only: user hid the locked Navigator preview block for all room types. */
   lockedNavigatorPreviewDismissed?: boolean;
@@ -284,6 +291,11 @@ export function PropertyInventoryTable({
     { day: 'Mon', date: '02', month: 'Feb' },
     { day: 'Tue', date: '03', month: 'Feb' },
   ];
+
+  const navigatorUnavailableFromIndex = useMemo(() => {
+    if (!navigatorIntelligenceUnlocked || !extendedUnoBeyondNavigator) return null;
+    return demoNavigatorUnavailableFromColumnIndex(dates.length, NAVIGATOR_DEMO_COVERED_COLUMNS);
+  }, [navigatorIntelligenceUnlocked, extendedUnoBeyondNavigator, dates.length]);
   
   // Event data for each date - red: important, amber: medium, green: less important
   const events = [
@@ -578,6 +590,7 @@ export function PropertyInventoryTable({
                         drawerInclusionPlanNames={DRAWER_INCLUSIONS_STANDARD}
                         ratePlan="Room aggregate (cheapest rate plan per day)"
                         events={events}
+                        navigatorUnavailableFromIndex={navigatorUnavailableFromIndex}
                       />
                     ) : lockedNavigatorPreviewDismissed ? null : (
                       <NavigatorIntelligenceLockedRow
@@ -743,6 +756,7 @@ export function PropertyInventoryTable({
                         drawerInclusionPlanNames={DRAWER_INCLUSIONS_SUITE}
                         ratePlan="Room aggregate (cheapest rate plan per day)"
                         events={events}
+                        navigatorUnavailableFromIndex={navigatorUnavailableFromIndex}
                       />
                     ) : lockedNavigatorPreviewDismissed ? null : (
                       <NavigatorIntelligenceLockedRow
@@ -902,6 +916,7 @@ export function PropertyInventoryTable({
                         drawerInclusionPlanNames={DRAWER_INCLUSIONS_DELUXE}
                         ratePlan="Room aggregate (cheapest rate plan per day)"
                         events={events}
+                        navigatorUnavailableFromIndex={navigatorUnavailableFromIndex}
                       />
                     ) : lockedNavigatorPreviewDismissed ? null : (
                       <NavigatorIntelligenceLockedRow
