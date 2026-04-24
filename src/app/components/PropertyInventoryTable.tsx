@@ -87,11 +87,12 @@ function parseSuiteRateInput(raw: string): number {
 }
 
 export function PropertyInventoryTable({
-  navigatorIntelligenceUnlocked = true,
+  navigatorIntelligenceUnlocked = false,
   onRequestNavigatorTrial,
   lockedNavigatorPreviewDismissed = false,
   onDismissLockedNavigatorPreview,
-  navigatorTrialRequestSubmitted = false
+  navigatorTrialRequestSubmitted = false,
+  navigatorUpsellContext = 'limited'
 }: {
   /** When false, competitor / parity chart rows show an upsell to Navigator trial. */
   navigatorIntelligenceUnlocked?: boolean;
@@ -101,6 +102,8 @@ export function PropertyInventoryTable({
   onDismissLockedNavigatorPreview?: () => void;
   /** Limited flow: user submitted the trial request form; trial is pending activation (not instant). */
   navigatorTrialRequestSubmitted?: boolean;
+  /** Locked-row messaging: never subscribed vs 30-day preview ended. */
+  navigatorUpsellContext?: 'limited' | 'trial_expired';
 } = {}) {
   const [isPropertyDetailsExpanded, setIsPropertyDetailsExpanded] = useState(false);
   const [isStandardRoomExpanded, setIsStandardRoomExpanded] = useState(false);
@@ -582,6 +585,7 @@ export function PropertyInventoryTable({
                         onRequestTrial={() => onRequestNavigatorTrial?.()}
                         onDismissPreview={onDismissLockedNavigatorPreview}
                         trialRequestSubmitted={navigatorTrialRequestSubmitted}
+                        navigatorUpsellContext={navigatorUpsellContext}
                       />
                     )}
 
@@ -746,6 +750,7 @@ export function PropertyInventoryTable({
                         onRequestTrial={() => onRequestNavigatorTrial?.()}
                         onDismissPreview={onDismissLockedNavigatorPreview}
                         trialRequestSubmitted={navigatorTrialRequestSubmitted}
+                        navigatorUpsellContext={navigatorUpsellContext}
                       />
                     )}
 
@@ -904,6 +909,7 @@ export function PropertyInventoryTable({
                         onRequestTrial={() => onRequestNavigatorTrial?.()}
                         onDismissPreview={onDismissLockedNavigatorPreview}
                         trialRequestSubmitted={navigatorTrialRequestSubmitted}
+                        navigatorUpsellContext={navigatorUpsellContext}
                       />
                     )}
 

@@ -9,13 +9,15 @@ type NavigatorIntelligenceLockedRowProps = {
   /** Limited / not-subscribed only: hide the whole preview block (persisted via parent + localStorage). */
   onDismissPreview?: () => void;
   trialRequestSubmitted?: boolean;
+  navigatorUpsellContext?: 'limited' | 'trial_expired';
 };
 
 export function NavigatorIntelligenceLockedRow({
   dates,
   onRequestTrial,
   onDismissPreview,
-  trialRequestSubmitted = false
+  trialRequestSubmitted = false,
+  navigatorUpsellContext = 'limited'
 }: NavigatorIntelligenceLockedRowProps) {
   const colSpan = 2 + dates.length;
 
@@ -37,14 +39,25 @@ export function NavigatorIntelligenceLockedRow({
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                     <h3 className="inline-flex items-center gap-1.5 text-[14px] font-semibold leading-snug tracking-tight text-[#0f172a] sm:text-[15px]">
                       <Sparkles className="size-3.5 shrink-0 text-[#2753eb]" strokeWidth={2} aria-hidden />
-                      <span>Competitor pricing &amp; rate parity</span>
+                      <span>
+                        {navigatorUpsellContext === 'trial_expired'
+                          ? 'Your trial has ended — upgrade to continue'
+                          : 'Competitor pricing & rate parity'}
+                      </span>
                     </h3>
                     <span className="rounded-md bg-slate-100/90 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                       Preview
                     </span>
                   </div>
                   <p className="max-w-2xl text-[11px] leading-snug text-slate-500 sm:text-[12px]">
-                    Hover or tap the blue dots on the chart below to preview what subscribers see.
+                    {navigatorUpsellContext === 'trial_expired' ? (
+                      <>
+                        Your 30-day trial has ended. Upgrade to continue tracking competitor pricing and rate parity on
+                        your live dates.
+                      </>
+                    ) : (
+                      <>Hover or tap the blue dots on the chart below to preview what subscribers see.</>
+                    )}
                   </p>
                 </div>
               </div>
@@ -64,6 +77,7 @@ export function NavigatorIntelligenceLockedRow({
               onRequestTrial={onRequestTrial}
               onDismissPreview={onDismissPreview}
               trialRequestSubmitted={trialRequestSubmitted}
+              navigatorUpsellContext={navigatorUpsellContext}
             />
           </div>
         </div>

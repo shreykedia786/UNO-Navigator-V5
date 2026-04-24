@@ -1,11 +1,16 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Info } from 'lucide-react';
+import { PARITY_PALETTE } from '@/app/lib/parityPalette';
 import { LegendIconMax, LegendIconMin, LegendIconMyRate } from './CompetitorChartLegendIcons';
 import {
+  DEFAULT_DETAILED_COMPETITOR_RATE_CURRENCY,
   DetailedCompetitorModal,
+  PARITY_OTA_TT_BODY,
+  PARITY_OTA_TT_LABEL,
+  PARITY_OTA_TT_META,
   type DetailedCompetitorRateCurrency
 } from './DetailedCompetitorModal';
+import { cn } from './ui/utils';
 
 /** Matches onboarding UI blue (`OnboardingTour`: `#2753eb` icons / gradient). Prepends `brightness(0)` for raster logos. */
 const NAVIGATOR_LOGO_BRAND_FILTER =
@@ -66,10 +71,11 @@ export function RateCandlestickChart({
   rateCurrency
 }: CandlestickChartProps) {
   const [showDetailedView, setShowDetailedView] = useState(false);
+  const currencySymbol = (rateCurrency ?? DEFAULT_DETAILED_COMPETITOR_RATE_CURRENCY).symbol;
 
   /** Room-level parity: your cheapest rate vs competitor mid (avg) of the spread. */
   const getRoomParity = (myRate: number, compAvg: number) => {
-    const parityColors = { Win: '#f97316', Meet: '#22c55e', Loss: '#ef4444' };
+    const parityColors = { Win: PARITY_PALETTE.win, Meet: PARITY_PALETTE.meet, Loss: PARITY_PALETTE.loss };
     if (!compAvg || myRate <= 0) {
       return { type: 'Meet' as const, score: 78, color: parityColors.Meet };
     }
@@ -187,17 +193,38 @@ export function RateCandlestickChart({
                       </span>
                       <ul className="m-0 flex list-none items-center gap-1.5 p-0">
                         <li>
-                          <span className="inline-flex rounded-full border border-orange-200/90 bg-orange-50/90 px-2 py-0.5 text-[9px] font-medium text-orange-900">
-                            Win
-                          </span>
-                        </li>
-                        <li>
-                          <span className="inline-flex rounded-full border border-emerald-200/90 bg-emerald-50/90 px-2 py-0.5 text-[9px] font-medium text-emerald-900">
+                          <span
+                            className="inline-flex rounded-full border px-2 py-0.5 text-[9px] font-medium"
+                            style={{
+                              borderColor: `${PARITY_PALETTE.meet}99`,
+                              backgroundColor: `${PARITY_PALETTE.meet}2e`,
+                              color: '#713f12'
+                            }}
+                          >
                             Meet
                           </span>
                         </li>
                         <li>
-                          <span className="inline-flex rounded-full border border-red-200/90 bg-red-50/90 px-2 py-0.5 text-[9px] font-medium text-red-900">
+                          <span
+                            className="inline-flex rounded-full border px-2 py-0.5 text-[9px] font-medium"
+                            style={{
+                              borderColor: `${PARITY_PALETTE.win}99`,
+                              backgroundColor: `${PARITY_PALETTE.win}2e`,
+                              color: '#14532d'
+                            }}
+                          >
+                            Win
+                          </span>
+                        </li>
+                        <li>
+                          <span
+                            className="inline-flex rounded-full border px-2 py-0.5 text-[9px] font-medium"
+                            style={{
+                              borderColor: `${PARITY_PALETTE.loss}99`,
+                              backgroundColor: `${PARITY_PALETTE.loss}2e`,
+                              color: '#7f1d1d'
+                            }}
+                          >
                             Loss
                           </span>
                         </li>
@@ -251,6 +278,8 @@ export function RateCandlestickChart({
               hasNext={!!nextData}
               chartHeight={chartHeight}
               dataTour={idx === 0 ? 'rate-chart' : undefined}
+              currencySymbol={currencySymbol}
+              roomTitle={roomType}
             />
           );
         })}
@@ -276,6 +305,20 @@ export function RateCandlestickChart({
   );
 }
 
+const CHART_COLUMN_TT_CARD =
+  'rounded-xl bg-gradient-to-b from-slate-50 to-white p-2.5 shadow-sm ring-1 ring-slate-200/70';
+
+/** Readable on white/slate-50: dark label on soft tint (not bright green/yellow text). */
+function chartTooltipParityStatusPill(type: string) {
+  if (type === 'Loss') {
+    return 'bg-[#FEE2E2] text-[#991B1B] ring-1 ring-[#E52E2E]/35';
+  }
+  if (type === 'Win') {
+    return 'bg-[#DCFCE7] text-[#14532D] ring-1 ring-[#4BCE64]/40';
+  }
+  return 'bg-[#FEF9C3] text-[#713F12] ring-1 ring-[#FFC51E]/55';
+}
+
 function ChartColumn({
   columnIndex,
   data,
@@ -288,7 +331,9 @@ function ChartColumn({
   hasPrev,
   hasNext,
   chartHeight,
-  dataTour
+  dataTour,
+  currencySymbol,
+  roomTitle
 }: {
   columnIndex: number;
   data: {
@@ -312,6 +357,9 @@ function ChartColumn({
   hasNext: boolean;
   chartHeight: number;
   dataTour?: string;
+  currencySymbol: string;
+  /** Room / product context — shown in tooltip header with the date. */
+  roomTitle?: string;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [tooltipLayout, setTooltipLayout] = useState<{
@@ -394,7 +442,10 @@ function ChartColumn({
     <div
       ref={tipRef}
       role="tooltip"
-      className="pointer-events-auto relative w-[min(300px,calc(100vw-24px))] max-w-[calc(100vw-24px)] rounded-lg border border-white/15 bg-[#141622] px-3 py-2.5 text-left text-[11px] leading-normal text-white shadow-2xl"
+      className={cn(
+        'pointer-events-auto relative w-[min(300px,calc(100vw-24px))] max-w-[calc(100vw-24px)] text-left text-slate-900',
+        'rounded-2xl border border-slate-200/80 bg-white px-3.5 py-3 shadow-[0_20px_50px_-16px_rgba(15,23,42,0.28)] ring-1 ring-slate-950/[0.04]'
+      )}
       onMouseEnter={() => {
         clearCloseTimer();
         setIsHovered(true);
@@ -418,92 +469,170 @@ function ChartColumn({
       }
     >
       {tooltipLayout?.placement === 'below' && (
-        <div className="pointer-events-none absolute bottom-full left-1/2 z-[1] mb-0 -translate-x-1/2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
-          <div className="h-0 w-0 border-b-[12px] border-l-[12px] border-r-[12px] border-l-transparent border-r-transparent border-b-[#141622]" />
+        <div className="pointer-events-none absolute bottom-full left-1/2 z-[1] mb-0 -translate-x-1/2">
+          <div className="relative">
+            <div
+              className="h-0 w-0 border-b-[8px] border-l-[7px] border-r-[7px] border-l-transparent border-r-transparent border-b-[rgb(226_232_240/0.85)]"
+              aria-hidden
+            />
+            <div
+              className="absolute left-1/2 top-px h-0 w-0 -translate-x-1/2 border-b-[7px] border-l-[6px] border-r-[6px] border-l-transparent border-r-transparent border-b-white"
+              aria-hidden
+            />
+          </div>
         </div>
       )}
-      <div className="mb-2 flex items-center justify-between gap-3 border-b border-white/15 pb-2">
-        <div className="min-w-0 flex-1 text-[12px] font-semibold leading-tight tracking-tight text-white">
-          {data.date.day}, {data.date.date} {data.date.month}
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1 pr-1">
+          {roomTitle ? (
+            <div
+              className="line-clamp-2 min-w-0 break-words text-[12px] font-semibold leading-snug tracking-tight text-slate-900"
+              title={roomTitle}
+            >
+              {roomTitle}
+            </div>
+          ) : null}
+          <div
+            className={cn(
+              'leading-tight tracking-tight text-slate-900',
+              roomTitle
+                ? 'mt-0.5 text-[11px] font-medium text-slate-600'
+                : 'text-[12px] font-semibold'
+            )}
+          >
+            {data.date.day}, {data.date.date} {data.date.month}
+          </div>
         </div>
         <div
-          className="flex shrink-0 items-stretch gap-2 rounded-lg border border-white/12 bg-black/30 py-1 pl-2 pr-2.5 shadow-inner shadow-black/20"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200/90 bg-slate-50 py-1 pl-2 pr-2.5 shadow-sm"
           role="group"
           title={`Room parity: ${data.parity.type} ${data.parity.score}%`}
           aria-label={`Room parity ${data.parity.type}, ${data.parity.score} percent`}
         >
-          <span className="flex items-center text-[9px] font-semibold uppercase leading-none tracking-[0.16em] text-slate-500">
-            Parity
+          <span className={PARITY_OTA_TT_LABEL}>Parity</span>
+          <span className="h-3 w-px shrink-0 bg-slate-200" aria-hidden />
+          <span
+            className={cn(
+              'rounded-md px-1.5 py-0.5 text-[11px] font-bold leading-none tabular-nums',
+              chartTooltipParityStatusPill(data.parity.type)
+            )}
+          >
+            {data.parity.type}
           </span>
-          <span className="w-px shrink-0 self-stretch bg-white/15" aria-hidden />
-          <div className="flex items-center gap-1 leading-none">
-            <span className="text-[11px] font-bold tabular-nums" style={{ color: data.parity.color }}>
-              {data.parity.type}
-            </span>
-            <span className="text-[10px] font-medium text-slate-500" aria-hidden>
-              ·
-            </span>
-            <span className="text-[12px] font-bold tabular-nums text-white">{data.parity.score}%</span>
+          <span className="text-[10px] font-medium text-slate-400" aria-hidden>
+            ·
+          </span>
+          <span className="text-[11px] font-bold tabular-nums text-slate-900">{data.parity.score}%</span>
+        </div>
+      </div>
+
+      <div
+        className="mt-2.5 h-px w-full bg-gradient-to-r from-transparent via-slate-200/90 to-transparent"
+        aria-hidden
+      />
+
+      <div className="mt-2.5 flex flex-col gap-2">
+        <div className={CHART_COLUMN_TT_CARD}>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-sky-700">
+            Your rate (cheapest)
+          </div>
+          <div className="mt-1.5 space-y-1.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className={PARITY_OTA_TT_META}>Rate</span>
+              <span className="text-[17px] font-semibold tabular-nums tracking-tight text-sky-700">
+                {currencySymbol}
+                {data.rate}
+              </span>
+            </div>
+            {myRateMeta ? (
+              <>
+                <div className="flex items-start justify-between gap-2">
+                  <span className={PARITY_OTA_TT_META}>Inclusion</span>
+                  <span className={cn(PARITY_OTA_TT_BODY, 'max-w-[min(12rem,55vw)] text-right font-semibold text-slate-800')}>
+                    {myRateMeta.ratePlan}
+                  </span>
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <span className={PARITY_OTA_TT_META}>Channel</span>
+                  <span className={cn(PARITY_OTA_TT_BODY, 'max-w-[min(12rem,55vw)] text-right font-semibold text-slate-800')}>
+                    {myRateMeta.channel}
+                  </span>
+                </div>
+              </>
+            ) : null}
+          </div>
+          <p
+            className="m-0 mt-2 border-t border-slate-200/40 pt-2 text-[9px] font-normal leading-snug text-slate-400"
+            role="note"
+          >
+            Your rate here may differ from your UNO (ARI) rate, as it is sourced from{' '}
+            <span className="font-medium text-slate-500">Navigator</span>.
+          </p>
+        </div>
+
+        <div className={CHART_COLUMN_TT_CARD}>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Competitor min</div>
+          <div className="mt-1.5 space-y-1.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className={PARITY_OTA_TT_META}>Rate</span>
+              <span className="text-[17px] font-semibold tabular-nums tracking-tight text-emerald-700">
+                {currencySymbol}
+                {data.min}
+              </span>
+            </div>
+            <div className="flex items-start justify-between gap-2">
+              <span className={PARITY_OTA_TT_META}>Inclusion</span>
+              <span className={cn(PARITY_OTA_TT_BODY, 'max-w-[min(12rem,55vw)] text-right font-semibold text-slate-800')}>
+                {data.competitorMinRatePlan}
+              </span>
+            </div>
+            <div className="flex items-start justify-between gap-2">
+              <span className={PARITY_OTA_TT_META}>Channel</span>
+              <span className={cn(PARITY_OTA_TT_BODY, 'max-w-[min(12rem,55vw)] text-right font-semibold text-slate-800')}>
+                {data.competitorMinChannel}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className={CHART_COLUMN_TT_CARD}>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-rose-700">Competitor max</div>
+          <div className="mt-1.5 space-y-1.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className={PARITY_OTA_TT_META}>Rate</span>
+              <span className="text-[17px] font-semibold tabular-nums tracking-tight text-rose-700">
+                {currencySymbol}
+                {data.max}
+              </span>
+            </div>
+            <div className="flex items-start justify-between gap-2">
+              <span className={PARITY_OTA_TT_META}>Inclusion</span>
+              <span className={cn(PARITY_OTA_TT_BODY, 'max-w-[min(12rem,55vw)] text-right font-semibold text-slate-800')}>
+                {data.competitorMaxRatePlan}
+              </span>
+            </div>
+            <div className="flex items-start justify-between gap-2">
+              <span className={PARITY_OTA_TT_META}>Channel</span>
+              <span className={cn(PARITY_OTA_TT_BODY, 'max-w-[min(12rem,55vw)] text-right font-semibold text-slate-800')}>
+                {data.competitorMaxChannel}
+              </span>
+            </div>
           </div>
         </div>
       </div>
-      <div className="flex flex-col gap-2">
-        <div className="rounded-md border border-white/15 bg-white/[0.08] px-2.5 py-2">
-          <div className="mb-1.5 text-[11px] font-semibold text-sky-300">Your rate (cheapest)</div>
-          <div className="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 text-[11px] text-slate-100">
-            <span className="shrink-0 text-slate-400">Amount</span>
-            <span className="font-semibold tabular-nums text-sky-300">€{data.rate}</span>
-            {myRateMeta && (
-              <>
-                <span className="shrink-0 text-slate-400">Plan</span>
-                <span className="break-words leading-snug text-slate-100">{myRateMeta.ratePlan}</span>
-                <span className="shrink-0 text-slate-400">Channel</span>
-                <span className="break-words leading-snug text-slate-100">{myRateMeta.channel}</span>
-              </>
-            )}
-          </div>
-          <div
-            className="mt-1.5 flex items-start gap-1.5 border-t border-white/10 pt-1.5"
-            role="note"
-            aria-label="Your rate here may differ from your UNO (ARI) rate, as it is sourced from Navigator."
-          >
-            <Info
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400"
-              strokeWidth={2.25}
+
+      {tooltipLayout?.placement === 'above' && (
+        <div className="pointer-events-none absolute top-full left-1/2 z-[1] -mt-px -translate-x-1/2">
+          <div className="relative">
+            <div
+              className="h-0 w-0 border-l-[7px] border-r-[7px] border-t-[8px] border-l-transparent border-r-transparent border-t-[rgb(226_232_240/0.85)]"
               aria-hidden
             />
-            <p className="m-0 min-w-0 flex-1 text-[10px] font-normal leading-snug text-slate-300">
-              Your rate here may differ from your UNO (ARI) rate, as it is sourced from{' '}
-              <span className="font-semibold text-sky-300">Navigator</span>.
-            </p>
+            <div
+              className="absolute bottom-px left-1/2 h-0 w-0 -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[7px] border-l-transparent border-r-transparent border-t-white"
+              aria-hidden
+            />
           </div>
-        </div>
-        <div className="rounded-md border border-white/15 bg-white/[0.08] px-2.5 py-2">
-          <div className="mb-1.5 text-[11px] font-semibold text-emerald-300">Competitor min</div>
-          <div className="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 text-[11px] text-slate-100">
-            <span className="shrink-0 text-slate-400">Amount</span>
-            <span className="font-semibold tabular-nums text-emerald-300">€{data.min}</span>
-            <span className="shrink-0 text-slate-400">Rate plan</span>
-            <span className="break-words leading-snug">{data.competitorMinRatePlan}</span>
-            <span className="shrink-0 text-slate-400">Cheapest on</span>
-            <span className="break-words leading-snug">{data.competitorMinChannel}</span>
-          </div>
-        </div>
-        <div className="rounded-md border border-white/15 bg-white/[0.08] px-2.5 py-2">
-          <div className="mb-1.5 text-[11px] font-semibold text-red-300">Competitor max</div>
-          <div className="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 text-[11px] text-slate-100">
-            <span className="shrink-0 text-slate-400">Amount</span>
-            <span className="font-semibold tabular-nums text-red-300">€{data.max}</span>
-            <span className="shrink-0 text-slate-400">Rate plan</span>
-            <span className="break-words leading-snug">{data.competitorMaxRatePlan}</span>
-            <span className="shrink-0 text-slate-400">Cheapest on</span>
-            <span className="break-words leading-snug">{data.competitorMaxChannel}</span>
-          </div>
-        </div>
-      </div>
-      {tooltipLayout?.placement === 'above' && (
-        <div className="pointer-events-none absolute top-full left-1/2 z-[1] -mt-px -translate-x-1/2 drop-shadow-[0_2px_3px_rgba(0,0,0,0.4)]">
-          <div className="h-0 w-0 border-l-[12px] border-r-[12px] border-t-[12px] border-l-transparent border-r-transparent border-t-[#141622]" />
         </div>
       )}
     </div>

@@ -21,6 +21,7 @@ import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { cn } from './ui/utils';
+import { PARITY_PALETTE, PARITY_SEGMENT_PERCENT_CLASS } from '@/app/lib/parityPalette';
 
 const DEFAULT_INCLUSION_PLAN_NAMES = [
   'Advance Purchase (Non-Refundable)',
@@ -232,7 +233,7 @@ function InsightHoverTooltip({
                         className={cn(
                           'mt-0.5 leading-snug',
                           visual === 'elevated'
-                            ? 'text-[10px] font-medium text-slate-500'
+                            ? 'text-[11px] font-medium text-slate-500'
                             : 'text-[10px] text-gray-500'
                         )}
                       >
@@ -259,7 +260,7 @@ function InsightHoverTooltip({
                       className={cn(
                         'leading-snug',
                         visual === 'elevated'
-                          ? 'mt-0.5 text-[10px] font-medium text-slate-500'
+                          ? 'mt-0.5 text-[11px] font-medium text-slate-500'
                           : 'mt-0.5 text-[10px] text-gray-500'
                       )}
                     >
@@ -349,7 +350,7 @@ function ParityTooltipHeaderRateViolation() {
       >
         R
       </span>
-      <span className="text-[10px] font-semibold leading-none tracking-tight text-rose-900">Rate violation</span>
+      <span className="text-[11px] font-semibold leading-none tracking-tight text-rose-900">Rate violation</span>
     </div>
   );
 }
@@ -381,9 +382,85 @@ function ParityTooltipHeaderAvailabilityViolation() {
       >
         A
       </span>
-      <span className="text-[10px] font-semibold leading-none tracking-tight text-rose-900">
+      <span className="text-[11px] font-semibold leading-none tracking-tight text-rose-900">
         Availability violation
       </span>
+    </div>
+  );
+}
+
+/** Parity OTA tooltip: one label tier + one body tier so copy stays visually consistent. */
+export const PARITY_OTA_TT_LABEL = 'text-[10px] font-semibold uppercase tracking-wide text-slate-500';
+export const PARITY_OTA_TT_META = 'text-[10px] font-medium text-slate-500';
+export const PARITY_OTA_TT_BODY = 'text-[11px] font-medium leading-snug text-slate-800';
+
+/** Left “Your rate” tile — shared by OTA parity tooltips and Parity tab Your Rates hover. */
+function ParityTooltipYourRateColumn({
+  myRate,
+  currencySymbol,
+  yourPlan,
+  showPlans,
+  soldOut
+}: {
+  myRate: number;
+  currencySymbol: string;
+  yourPlan: string;
+  showPlans: boolean;
+  /** No published rate / direct unavailable — same treatment as availability-violation OTA tooltip. */
+  soldOut: boolean;
+}) {
+  return (
+    <div className="rounded-xl bg-gradient-to-b from-slate-50 to-white p-2.5 shadow-sm ring-1 ring-slate-200/70">
+      <div className={PARITY_OTA_TT_LABEL}>Your rate</div>
+      <div className="mt-0.5 text-[17px] font-semibold tabular-nums tracking-tight text-slate-900">
+        {soldOut ? (
+          <span className="text-[16px] font-semibold tracking-tight text-slate-500">Sold out</span>
+        ) : (
+          <>
+            {currencySymbol}
+            {myRate}
+          </>
+        )}
+      </div>
+      <div className={cn(PARITY_OTA_TT_META, 'mt-0.5')}>Brand.com</div>
+      {showPlans ? (
+        <div className="mt-1.5 border-t border-slate-200/70 pt-1.5">
+          <div className={PARITY_OTA_TT_LABEL}>Inclusion</div>
+          <p className={cn('m-0 mt-0.5 line-clamp-2', PARITY_OTA_TT_BODY)}>{yourPlan}</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Right “Channel” tile — parity OTA tooltips and Competitor tab compset cell hovers. */
+function ParityTooltipChannelRateColumn({
+  channelRate,
+  currencySymbol,
+  channelSiteLabel,
+  channelPlan,
+  showPlans
+}: {
+  channelRate: number;
+  currencySymbol: string;
+  channelSiteLabel: string;
+  channelPlan: string;
+  showPlans: boolean;
+}) {
+  return (
+    <div className="rounded-xl bg-gradient-to-b from-slate-50 to-white p-2.5 shadow-sm ring-1 ring-slate-200/70">
+      <div className={PARITY_OTA_TT_LABEL}>Channel</div>
+      <div className="mt-0.5 text-[17px] font-semibold tabular-nums tracking-tight text-slate-900">
+        {currencySymbol}
+        {channelRate}
+      </div>
+      <div className={cn(PARITY_OTA_TT_META, 'mt-0.5 line-clamp-1')}>{channelSiteLabel}</div>
+      {showPlans ? (
+        <div className="mt-1.5 border-t border-slate-200/70 pt-1.5">
+          <div className={PARITY_OTA_TT_LABEL}>Inclusion</div>
+          <p className={cn('m-0 mt-0.5 line-clamp-2', PARITY_OTA_TT_BODY)}>{channelPlan}</p>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -400,10 +477,8 @@ function ParityTooltipModernBody({
   gapPct,
   isLoss,
   lossAmount,
-  lossPercent,
   isWin,
   winAmount,
-  winPercent,
   currencySymbol,
   availabilityViolation = false
 }: {
@@ -418,57 +493,37 @@ function ParityTooltipModernBody({
   gapPct: number;
   isLoss: boolean;
   lossAmount: number;
-  lossPercent: number;
   isWin: boolean;
   /** Channel rate − your rate when Win (favourable spread). */
   winAmount: number;
-  winPercent: number;
   currencySymbol: string;
   /** Direct sold out while channel still lists a rate — only the “Your rate” tile shows Sold out; Loss strip matches rate violation layout. */
   availabilityViolation?: boolean;
 }) {
   const statusChip =
     status === 'Loss'
-      ? 'bg-rose-100 text-rose-900 ring-1 ring-rose-200/80'
+      ? 'bg-[#FEE2E2] text-[#991B1B] ring-1 ring-[#E52E2E]/35'
       : status === 'Win'
-        ? 'bg-amber-100 text-amber-950 ring-1 ring-amber-200/80'
-        : 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/80';
+        ? 'bg-[#DCFCE7] text-[#14532D] ring-1 ring-[#4BCE64]/40'
+        : 'bg-[#FEF9C3] text-[#713F12] ring-1 ring-[#FFC51E]/55';
 
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-xl bg-gradient-to-b from-slate-50 to-white p-2.5 shadow-sm ring-1 ring-slate-200/70">
-          <div className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-400">Your rate</div>
-          <div className="mt-0.5 text-[17px] font-semibold tabular-nums tracking-tight text-slate-900">
-            {availabilityViolation ? (
-              <span className="text-[15px] font-semibold tracking-tight text-slate-500">Sold out</span>
-            ) : (
-              <>
-                {currencySymbol}
-                {myRate}
-              </>
-            )}
-          </div>
-          <div className="text-[8px] font-medium text-slate-400">Brand.com</div>
-          {showPlans ? (
-            <p className="m-0 mt-1.5 border-t border-slate-200/70 pt-1.5 text-[10px] leading-snug text-slate-700 line-clamp-2">
-              {yourPlan}
-            </p>
-          ) : null}
-        </div>
-        <div className="rounded-xl bg-gradient-to-b from-slate-50 to-white p-2.5 shadow-sm ring-1 ring-slate-200/70">
-          <div className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-400">Channel</div>
-          <div className="mt-0.5 text-[17px] font-semibold tabular-nums tracking-tight text-slate-900">
-            {currencySymbol}
-            {channelRate}
-          </div>
-          <div className="line-clamp-1 text-[8px] font-medium text-slate-400">{channelSiteLabel}</div>
-          {showPlans ? (
-            <p className="m-0 mt-1.5 border-t border-slate-200/70 pt-1.5 text-[10px] leading-snug text-slate-700 line-clamp-2">
-              {channelPlan}
-            </p>
-          ) : null}
-        </div>
+        <ParityTooltipYourRateColumn
+          myRate={myRate}
+          currencySymbol={currencySymbol}
+          yourPlan={yourPlan}
+          showPlans={showPlans}
+          soldOut={availabilityViolation}
+        />
+        <ParityTooltipChannelRateColumn
+          channelRate={channelRate}
+          currencySymbol={currencySymbol}
+          channelSiteLabel={channelSiteLabel}
+          channelPlan={channelPlan}
+          showPlans={showPlans}
+        />
       </div>
 
       <div
@@ -482,22 +537,15 @@ function ParityTooltipModernBody({
           </span>
         ) : null}
         {isLoss ? (
-          <span className="ml-auto text-[12px] font-semibold tabular-nums text-rose-600">
+          <span className="ml-auto text-[11px] font-semibold tabular-nums text-rose-600">
             {currencySymbol}
             {lossAmount}
-            {!availabilityViolation ? (
-              <>
-                {' '}
-                <span className="text-[11px] font-semibold text-rose-500/95">({lossPercent}%)</span>
-              </>
-            ) : null}
           </span>
         ) : null}
         {isWin && winAmount > 0 ? (
-          <span className="ml-auto text-[12px] font-semibold tabular-nums text-amber-800">
+          <span className="ml-auto text-[11px] font-semibold tabular-nums text-emerald-900">
             {currencySymbol}
-            {winAmount}{' '}
-            <span className="text-[11px] font-semibold text-amber-700/95">({winPercent}%)</span>
+            {winAmount}
           </span>
         ) : null}
       </div>
@@ -559,21 +607,30 @@ function ParityStatusLegendFooter({ className }: { className?: string }) {
       aria-label="Parity legend"
     >
       <div className="flex items-center gap-1.5">
-        <div className="h-3 w-4 shrink-0 rounded-sm bg-[#f97316]" />
-        <span className="text-[10px] text-[#666666] sm:text-[11px]">Win</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="h-3 w-4 shrink-0 rounded-sm bg-[#22c55e]" />
+        <div
+          className="h-3 w-4 shrink-0 rounded-sm"
+          style={{ backgroundColor: PARITY_PALETTE.meet }}
+        />
         <span className="text-[10px] text-[#666666] sm:text-[11px]">Meet</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <div className="h-3 w-4 shrink-0 rounded-sm bg-[#ef4444]" />
+        <div
+          className="h-3 w-4 shrink-0 rounded-sm"
+          style={{ backgroundColor: PARITY_PALETTE.win }}
+        />
+        <span className="text-[10px] text-[#666666] sm:text-[11px]">Win</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div
+          className="h-3 w-4 shrink-0 rounded-sm"
+          style={{ backgroundColor: PARITY_PALETTE.loss }}
+        />
         <span className="text-[10px] text-[#666666] sm:text-[11px]">Loss</span>
       </div>
       <div className="flex items-center gap-1.5">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0 sm:h-4 sm:w-4">
-          <circle cx="8" cy="8" r="7" stroke="#ef4444" strokeWidth="1.5" fill="none" />
-          <text x="8" y="11" textAnchor="middle" fontSize="10" fontWeight="600" fill="#ef4444">
+          <circle cx="8" cy="8" r="7" stroke={PARITY_PALETTE.loss} strokeWidth="1.5" fill="none" />
+          <text x="8" y="11" textAnchor="middle" fontSize="10" fontWeight="600" fill={PARITY_PALETTE.loss}>
             R
           </text>
         </svg>
@@ -599,6 +656,7 @@ function CompetitorRateInsightCell({
   competitorName,
   dateLabel,
   currencySymbol,
+  showTooltipRatePlanNames,
   children
 }: {
   compRate: number | null;
@@ -607,6 +665,8 @@ function CompetitorRateInsightCell({
   competitorName: string;
   dateLabel: string;
   currencySymbol: string;
+  /** Match parity tab: show inclusion plan copy only when filter is Any (lowest rateplan). */
+  showTooltipRatePlanNames: boolean;
   children: ReactNode;
 }) {
   if (compRate === null) {
@@ -617,24 +677,18 @@ function CompetitorRateInsightCell({
     <InsightHoverTooltip
       title={competitorName}
       dateLabel={dateLabel}
+      visual="elevated"
+      panelWidth={300}
+      estimatedHeight={showTooltipRatePlanNames ? 200 : 150}
+      triggerClassName="relative flex min-h-[1.5rem] w-full min-w-0 items-center justify-center py-0.5"
       body={
-        <dl className="m-0 mt-1.5 space-y-1.5 border-t border-gray-100 pt-1.5 text-[10px] leading-snug text-gray-700">
-          <div className="flex gap-3">
-            <dt className="shrink-0 text-gray-500">Rate</dt>
-            <dd className="min-w-0 flex-1 text-right font-medium tabular-nums text-[#333333]">
-              {currencySymbol}
-              {compRate}
-            </dd>
-          </div>
-          <div className="flex gap-3">
-            <dt className="shrink-0 text-gray-500">Inclusion</dt>
-            <dd className="min-w-0 flex-1 text-right font-medium text-[#333333]">{inclusionPlanName}</dd>
-          </div>
-          <div className="flex gap-3">
-            <dt className="shrink-0 text-gray-500">Channel</dt>
-            <dd className="min-w-0 flex-1 text-right font-medium text-[#333333]">{channelName}</dd>
-          </div>
-        </dl>
+        <ParityTooltipChannelRateColumn
+          channelRate={compRate}
+          currencySymbol={currencySymbol}
+          channelSiteLabel={channelName}
+          channelPlan={inclusionPlanName}
+          showPlans={showTooltipRatePlanNames}
+        />
       }
     >
       {children}
@@ -642,7 +696,7 @@ function CompetitorRateInsightCell({
   );
 }
 
-/** Tooltip for the blue "Your Rates" row — rate under hover and inclusion. */
+/** Tooltip for the blue "Your Rates" row — competitor tab uses compact list; parity tab matches OTA elevated cards. */
 function YourRatesRowTooltipCell({
   roomTitle,
   dateLabel,
@@ -651,7 +705,9 @@ function YourRatesRowTooltipCell({
   inclusionPlanName,
   currencySymbol,
   detailSlot,
-  children
+  children,
+  elevatedTooltip = false,
+  showTooltipRatePlanNames = true
 }: {
   roomTitle: string;
   dateLabel: string;
@@ -659,10 +715,48 @@ function YourRatesRowTooltipCell({
   soldOut: boolean;
   inclusionPlanName: string;
   currencySymbol: string;
-  /** Optional extra block (e.g. parity summary on the Parity tab). */
+  /** Optional extra block (e.g. summary) — styled like parity OTA footer strip when elevated. */
   detailSlot?: ReactNode;
   children: ReactNode;
+  /** Parity + Competitor tabs: same elevated shell and “Your rate” card as parity channel tooltips. */
+  elevatedTooltip?: boolean;
+  /** When elevated: show inclusion block under rate (same rule as OTA tooltips). */
+  showTooltipRatePlanNames?: boolean;
 }) {
+  if (elevatedTooltip) {
+    return (
+      <InsightHoverTooltip
+        title={roomTitle}
+        dateLabel={dateLabel}
+        visual="elevated"
+        panelWidth={300}
+        estimatedHeight={detailSlot ? 240 : showTooltipRatePlanNames ? 200 : 150}
+        triggerClassName="relative flex min-h-[1.75rem] w-full min-w-0 items-center justify-center py-0.5"
+        body={
+          <div className="space-y-2">
+            <ParityTooltipYourRateColumn
+              myRate={yourRate}
+              currencySymbol={currencySymbol}
+              yourPlan={inclusionPlanName}
+              showPlans={showTooltipRatePlanNames}
+              soldOut={soldOut}
+            />
+            {detailSlot ? (
+              <div
+                className="rounded-xl bg-slate-50 px-3 py-2.5 text-[11px] leading-snug text-slate-600 ring-1 ring-slate-200/70"
+                role="note"
+              >
+                {detailSlot}
+              </div>
+            ) : null}
+          </div>
+        }
+      >
+        {children}
+      </InsightHoverTooltip>
+    );
+  }
+
   return (
     <InsightHoverTooltip
       title={roomTitle}
@@ -1365,6 +1459,8 @@ export function DetailedCompetitorModal({
                         soldOut={soldOut}
                         inclusionPlanName={resolveTooltipInclusionPlan(0, globalIdx)}
                         currencySymbol={currencySymbol}
+                        elevatedTooltip
+                        showTooltipRatePlanNames={inclusionFilter === 'any'}
                       >
                         {editableYourRates && onYourRateChange ? (
                           <input
@@ -1535,6 +1631,7 @@ export function DetailedCompetitorModal({
                                         : ''
                                     }
                                     currencySymbol={currencySymbol}
+                                    showTooltipRatePlanNames={inclusionFilter === 'any'}
                                   >
                                     {compRate === null ? null : isMaxRate ? (
                                       <span className="text-[14px] font-bold text-[#f44336]">
@@ -1814,8 +1911,8 @@ function ParityAnalysisContent({
         : winCount >= meetCount && winCount >= lossCount
           ? 'Win'
           : 'Meet';
-    if (dominant === 'Win') return { bg: '#fff7ed', text: '#9a3412' as const };
-    if (dominant === 'Meet') return { bg: '#dcfce7', text: '#166534' as const };
+    if (dominant === 'Win') return { bg: '#ecfdf5', text: '#14532d' as const };
+    if (dominant === 'Meet') return { bg: '#fffbeb', text: '#78350f' as const };
     return { bg: '#fee2e2', text: '#991b1b' as const };
   };
 
@@ -1921,10 +2018,10 @@ function ParityAnalysisContent({
               <div className="text-left text-[12px] font-semibold text-[#333333]">Channels</div>
             </th>
             <th className="px-2 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
-              <div className="text-[12px] font-semibold text-[#333333]">Win/Meet/Loss</div>
+              <div className="text-[12px] font-semibold text-[#333333]">Meet / Win / Loss</div>
             </th>
             <th className="px-2 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
-              <div className="text-[10px] font-semibold text-[#333333]">Parity Score</div>
+              <div className="text-[12px] font-semibold text-[#333333]">Parity Score</div>
             </th>
             {visibleDates.map((date, idx) => (
               <th key={idx} className="px-2 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
@@ -1942,38 +2039,47 @@ function ParityAnalysisContent({
               <div className="text-left text-[13px] font-semibold leading-tight text-[#333333]">Overall Parity %</div>
             </td>
             <td className="border-r border-[#d4d8de] bg-[#e2e5ea] px-2 py-3.5">
-              <div className="flex h-6 overflow-hidden rounded border border-[#c8ccd2]">
-                {overallParityDistribution.winPercent > 0 && (
+              <div className="flex h-6 overflow-hidden rounded-lg border border-[#c8ccd2]">
+                {overallParityDistribution.meetPercent > 0 && (
                   <div
-                    className="flex min-w-0 items-center justify-center bg-[#f97316]"
-                    style={{ width: `${overallParityDistribution.winPercent}%` }}
+                    className="flex min-w-0 items-center justify-center"
+                    style={{
+                      width: `${overallParityDistribution.meetPercent}%`,
+                      backgroundColor: PARITY_PALETTE.meet
+                    }}
                   >
-                    {overallParityDistribution.winPercent >= 10 && (
-                      <span className="text-[10px] font-semibold tabular-nums text-white">
-                        {Math.round(overallParityDistribution.winPercent)}%
+                    {overallParityDistribution.meetPercent >= 10 && (
+                      <span className={PARITY_SEGMENT_PERCENT_CLASS.meet}>
+                        {Math.round(overallParityDistribution.meetPercent)}%
                       </span>
                     )}
                   </div>
                 )}
-                {overallParityDistribution.meetPercent > 0 && (
+                {overallParityDistribution.winPercent > 0 && (
                   <div
-                    className="flex min-w-0 items-center justify-center bg-[#22c55e]"
-                    style={{ width: `${overallParityDistribution.meetPercent}%` }}
+                    className="flex min-w-0 items-center justify-center"
+                    style={{
+                      width: `${overallParityDistribution.winPercent}%`,
+                      backgroundColor: PARITY_PALETTE.win
+                    }}
                   >
-                    {overallParityDistribution.meetPercent >= 10 && (
-                      <span className="text-[10px] font-semibold tabular-nums text-white">
-                        {Math.round(overallParityDistribution.meetPercent)}%
+                    {overallParityDistribution.winPercent >= 10 && (
+                      <span className={PARITY_SEGMENT_PERCENT_CLASS.win}>
+                        {Math.round(overallParityDistribution.winPercent)}%
                       </span>
                     )}
                   </div>
                 )}
                 {overallParityDistribution.lossPercent > 0 && (
                   <div
-                    className="flex min-w-0 items-center justify-center bg-[#ef4444]"
-                    style={{ width: `${overallParityDistribution.lossPercent}%` }}
+                    className="flex min-w-0 items-center justify-center"
+                    style={{
+                      width: `${overallParityDistribution.lossPercent}%`,
+                      backgroundColor: PARITY_PALETTE.loss
+                    }}
                   >
                     {overallParityDistribution.lossPercent >= 10 && (
-                      <span className="text-[10px] font-semibold tabular-nums text-white">
+                      <span className={PARITY_SEGMENT_PERCENT_CLASS.loss}>
                         {Math.round(overallParityDistribution.lossPercent)}%
                       </span>
                     )}
@@ -2014,8 +2120,6 @@ function ParityAnalysisContent({
               const globalIdx = dateOffset + idx;
               const soldOut = rate === 0 || !rate;
               const { bg, text } = getYourRateParityColumnTint(idx, rate);
-              const parityPct = getDateParityPercentage(idx);
-              const { winCount, meetCount, lossCount, totalCount } = getDateParityCounts(idx);
               const dateLabel = visibleDates[idx] ? formatInsightDate(visibleDates[idx]) : '';
 
               return (
@@ -2031,20 +2135,8 @@ function ParityAnalysisContent({
                     soldOut={soldOut}
                     inclusionPlanName={resolveParityYourRatePlan(globalIdx)}
                     currencySymbol={currencySymbol}
-                    detailSlot={
-                      <div>
-                        <span className="font-medium text-gray-700">Overall parity (this date): </span>
-                        <span className="font-semibold tabular-nums text-[#333333]">{parityPct}%</span>
-                        {totalCount > 0 ? (
-                          <span className="text-gray-500">
-                            {' '}
-                            · {winCount} win / {meetCount} meet / {lossCount} loss
-                          </span>
-                        ) : (
-                          <span className="text-gray-500"> · no channel data</span>
-                        )}
-                      </div>
-                    }
+                    elevatedTooltip
+                    showTooltipRatePlanNames={showTooltipRatePlanNames}
                   >
                     {soldOut ? (
                       <span className="font-normal" style={{ color: text }}>
@@ -2084,38 +2176,47 @@ function ParityAnalysisContent({
 
                 {/* Win/Meet/Loss — flat colors, single row; % inside segment when wide enough */}
                 <td className="border-r border-[#e0e0e0] bg-white px-2 py-4">
-                  <div className="flex h-6 overflow-hidden rounded border border-[#e8e8e8]">
-                    {distribution.winPercent > 0 && (
+                  <div className="flex h-6 overflow-hidden rounded-lg border border-[#e8e8e8]">
+                    {distribution.meetPercent > 0 && (
                       <div
-                        className="flex min-w-0 items-center justify-center bg-[#f97316]"
-                        style={{ width: `${distribution.winPercent}%` }}
+                        className="flex min-w-0 items-center justify-center"
+                        style={{
+                          width: `${distribution.meetPercent}%`,
+                          backgroundColor: PARITY_PALETTE.meet
+                        }}
                       >
-                        {distribution.winPercent >= 10 && (
-                          <span className="text-[10px] font-semibold tabular-nums text-white">
-                            {Math.round(distribution.winPercent)}%
+                        {distribution.meetPercent >= 10 && (
+                          <span className={PARITY_SEGMENT_PERCENT_CLASS.meet}>
+                            {Math.round(distribution.meetPercent)}%
                           </span>
                         )}
                       </div>
                     )}
-                    {distribution.meetPercent > 0 && (
+                    {distribution.winPercent > 0 && (
                       <div
-                        className="flex min-w-0 items-center justify-center bg-[#22c55e]"
-                        style={{ width: `${distribution.meetPercent}%` }}
+                        className="flex min-w-0 items-center justify-center"
+                        style={{
+                          width: `${distribution.winPercent}%`,
+                          backgroundColor: PARITY_PALETTE.win
+                        }}
                       >
-                        {distribution.meetPercent >= 10 && (
-                          <span className="text-[10px] font-semibold tabular-nums text-white">
-                            {Math.round(distribution.meetPercent)}%
+                        {distribution.winPercent >= 10 && (
+                          <span className={PARITY_SEGMENT_PERCENT_CLASS.win}>
+                            {Math.round(distribution.winPercent)}%
                           </span>
                         )}
                       </div>
                     )}
                     {distribution.lossPercent > 0 && (
                       <div
-                        className="flex min-w-0 items-center justify-center bg-[#ef4444]"
-                        style={{ width: `${distribution.lossPercent}%` }}
+                        className="flex min-w-0 items-center justify-center"
+                        style={{
+                          width: `${distribution.lossPercent}%`,
+                          backgroundColor: PARITY_PALETTE.loss
+                        }}
                       >
                         {distribution.lossPercent >= 10 && (
-                          <span className="text-[10px] font-semibold tabular-nums text-white">
+                          <span className={PARITY_SEGMENT_PERCENT_CLASS.loss}>
                             {Math.round(distribution.lossPercent)}%
                           </span>
                         )}
@@ -2191,10 +2292,8 @@ function ParityAnalysisContent({
                               gapPct={0}
                               isLoss
                               lossAmount={ch}
-                              lossPercent={0}
                               isWin={false}
                               winAmount={0}
-                              winPercent={0}
                               currencySymbol={currencySymbol}
                               availabilityViolation
                             />
@@ -2216,22 +2315,13 @@ function ParityAnalysisContent({
                   const isWin = cellDisplay.status === 'Win';
                   const isMeet = cellDisplay.status === 'Meet';
                   const isLoss = cellDisplay.status === 'Loss';
-                  const bgColor = isWin ? '#fff7ed' : (isMeet ? '#dcfce7' : '#fee2e2');
-                  const textColor = isWin ? '#9a3412' : (isMeet ? '#166534' : '#991b1b');
+                  const bgColor = isWin ? '#ecfdf5' : isMeet ? '#fffbeb' : '#fee2e2';
+                  const textColor = isWin ? '#14532d' : isMeet ? '#78350f' : '#991b1b';
 
                   const lossAmount = isLoss && cellDisplay.rate ? myRate - cellDisplay.rate : 0;
-                  const lossPercent =
-                    isLoss && cellDisplay.rate ? Math.round(((myRate - cellDisplay.rate) / cellDisplay.rate) * 100) : 0;
 
                   const winAmount =
                     isWin && cellDisplay.rate != null ? Math.max(0, cellDisplay.rate - myRate) : 0;
-                  const winPercent =
-                    isWin && cellDisplay.rate && cellDisplay.rate > 0
-                      ? Math.min(
-                          999,
-                          Math.round(((cellDisplay.rate - myRate) / cellDisplay.rate) * 100)
-                        )
-                      : 0;
 
                   const status = cellDisplay.status as 'Win' | 'Meet' | 'Loss';
                   const pillPct =
@@ -2265,10 +2355,8 @@ function ParityAnalysisContent({
                             gapPct={pillPct}
                             isLoss={isLoss}
                             lossAmount={lossAmount}
-                            lossPercent={lossPercent}
                             isWin={isWin}
                             winAmount={winAmount}
-                            winPercent={winPercent}
                             currencySymbol={currencySymbol}
                           />
                         }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { BarChart3, Check, Scale } from 'lucide-react';
+import { NavigatorUpgradeRequestModal } from '@/app/components/NavigatorUpgradeRequestModal';
 import { Button } from '@/app/components/ui/button';
 import {
   Dialog,
@@ -10,6 +11,7 @@ import {
   DialogTitle
 } from '@/app/components/ui/dialog';
 import { cn } from '@/app/components/ui/utils';
+import { PARITY_PALETTE } from '@/app/lib/parityPalette';
 
 const DEMO_THANKS_AUTO_CLOSE_MS = 3600;
 
@@ -46,52 +48,47 @@ type HotspotConfig = {
   graphPricing?: GraphPricing;
 };
 
-/** Parity tints — same palette as onboarding parity grid + subscriber legend. */
-const PARITY_WIN = '#f97316';
-const PARITY_MEET = '#22c55e';
-const PARITY_LOSS = '#ef4444';
-
-const DRAWER_TAB_ACTIVE = '#2196F3';
-
-/** Mini preview of DetailedCompetitorModal: competitor vs parity tabs + how users compare data. */
+/** Mini preview of DetailedCompetitorModal — light theme to match subscribed in-app tooltips. */
 function DetailsDrawerExplainer({ withTopMargin = true }: { withTopMargin?: boolean }) {
   const parityMatrix = [
-    [PARITY_MEET, PARITY_WIN, PARITY_LOSS, PARITY_MEET],
-    [PARITY_WIN, PARITY_MEET, PARITY_MEET, PARITY_LOSS],
-    [PARITY_MEET, PARITY_LOSS, PARITY_WIN, PARITY_MEET]
+    [PARITY_PALETTE.meet, PARITY_PALETTE.win, PARITY_PALETTE.loss, PARITY_PALETTE.meet],
+    [PARITY_PALETTE.win, PARITY_PALETTE.meet, PARITY_PALETTE.meet, PARITY_PALETTE.loss],
+    [PARITY_PALETTE.meet, PARITY_PALETTE.loss, PARITY_PALETTE.win, PARITY_PALETTE.meet]
   ] as const;
   const parityChannels = ['BK', 'Exp', 'Hg'] as const;
 
   return (
     <div
       className={cn('space-y-1.5', withTopMargin && 'mt-2')}
-      aria-label="Subscriber drawer: competitor and parity analysis tabs"
+      aria-label="View details: competitor pricing and parity insights"
     >
-      <div className="overflow-hidden rounded-lg border border-white/10 bg-[#0c0f14] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-        <p className="border-b border-white/10 bg-white/[0.04] px-2 py-1 text-center text-[10px] font-medium uppercase tracking-wide text-slate-500">
-          Same layout as live drawer
-        </p>
-        <div className="flex border-b border-white/10">
-          <div
-            className="flex flex-1 items-center justify-center gap-0.5 border-b-2 px-1 py-1.5 text-[10px] font-semibold leading-tight text-blue-300"
-            style={{ borderBottomColor: DRAWER_TAB_ACTIVE }}
-          >
-            <BarChart3 className="size-3 shrink-0 opacity-90" strokeWidth={2} aria-hidden />
-            <span className="text-center">Competitor</span>
-          </div>
-          <div className="flex flex-1 items-center justify-center gap-0.5 border-b-2 border-transparent px-1 py-1.5 text-[10px] font-medium leading-tight text-slate-500">
-            <Scale className="size-3 shrink-0 opacity-80" strokeWidth={2} aria-hidden />
-            <span className="text-center">Parity</span>
+      <div className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+        <div className="border-b border-slate-200/80 bg-white">
+          <p className="border-b border-slate-100 bg-slate-50/70 px-2 py-1 text-center text-[9px] font-medium uppercase tracking-[0.12em] text-slate-400">
+            What you&apos;ll see
+          </p>
+          <div className="flex" role="presentation">
+            <div className="flex min-w-0 flex-1 items-center justify-center gap-1 px-1.5 py-1.5 text-[10px] font-medium text-slate-500">
+              <BarChart3 className="size-3 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
+              <span className="truncate">Competitor</span>
+            </div>
+            <div className="w-px shrink-0 bg-slate-200/90" aria-hidden />
+            <div className="flex min-w-0 flex-1 items-center justify-center gap-1 px-1.5 py-1.5 text-[10px] font-medium text-slate-500">
+              <Scale className="size-3 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
+              <span className="truncate">Parity</span>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5 p-2">
-          <div className="min-w-0 rounded-md border border-white/10 bg-white/[0.03] p-1.5">
-            <p className="text-[11px] font-semibold leading-snug text-slate-200">Competitor price comparison</p>
-            <p className="mt-0.5 text-[10px] leading-snug text-slate-400">
-              See how your rates compare with competitors for each date, based on similar room and plan types.
-            </p>
-            <div className="mt-1.5 flex h-9 items-end justify-between gap-1 px-0.5">
+        <p className="border-b border-slate-100 bg-white px-3 py-2 text-[11px] leading-snug text-slate-600">
+          Compare your rates with competitors and monitor channel parity across dates.
+        </p>
+
+        <div className="grid grid-cols-2 gap-2.5 bg-slate-50/50 p-3">
+          <div className="flex min-w-0 flex-col rounded-lg border border-slate-200/80 bg-white p-2.5 shadow-sm">
+            <p className="text-[11px] font-semibold leading-tight text-slate-900">Competitor pricing</p>
+            <p className="mt-1 text-[10px] leading-snug text-slate-500">Rates vs market by date.</p>
+            <div className="mt-2 flex h-10 flex-1 items-end justify-between gap-1.5 px-0.5">
               {[
                 { lo: 22, hi: 78, you: 52 },
                 { lo: 18, hi: 72, you: 58 },
@@ -100,46 +97,43 @@ function DetailsDrawerExplainer({ withTopMargin = true }: { withTopMargin?: bool
               ].map((col, i) => (
                 <div key={i} className="relative h-full w-4 shrink-0">
                   <div
-                    className="absolute bottom-0 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-slate-700/60"
+                    className="absolute bottom-0 left-1/2 w-px -translate-x-1/2 rounded-full bg-slate-200"
                     style={{ height: '100%' }}
                   />
                   <div
-                    className="absolute left-1/2 w-1.5 -translate-x-1/2 rounded-sm bg-slate-500/30"
+                    className="absolute left-1/2 w-1.5 -translate-x-1/2 rounded-sm bg-slate-300/35"
                     style={{
                       bottom: `${col.lo}%`,
                       height: `${col.hi - col.lo}%`
                     }}
                   />
                   <div
-                    className="absolute left-1/2 size-[5px] -translate-x-1/2 rounded-full border border-white bg-[#2196F3] shadow-sm"
+                    className="absolute left-1/2 size-[6px] -translate-x-1/2 rounded-full border-2 border-white bg-[#2196F3] shadow-sm"
                     style={{ bottom: `${col.you}%` }}
                   />
                 </div>
               ))}
             </div>
-            <p className="mt-1 text-center text-[9px] tabular-nums text-slate-500">Thu · Fri · Sat · Sun</p>
+            <p className="mt-2 text-center text-[10px] tabular-nums leading-none text-slate-400">Thu · Fri · Sat · Sun</p>
           </div>
 
-          <div className="min-w-0 rounded-md border border-white/10 bg-white/[0.03] p-1.5">
-            <p className="text-[11px] font-semibold leading-snug text-slate-200">Rate parity insights</p>
-            <p className="mt-0.5 text-[10px] leading-snug text-slate-400">
-              Understand whether you&apos;re winning, matching, or losing against each channel&apos;s price for every
-              date.
-            </p>
-            <div className="mt-1.5 space-y-0.5">
+          <div className="flex min-w-0 flex-col rounded-lg border border-slate-200/80 bg-white p-2.5 shadow-sm">
+            <p className="text-[11px] font-semibold leading-tight text-slate-900">Parity insights</p>
+            <p className="mt-1 text-[10px] leading-snug text-slate-500">Win, meet, or loss by channel.</p>
+            <div className="mt-2 flex flex-1 flex-col justify-center space-y-1.5">
               {parityMatrix.map((row, ri) => (
                 <div
                   key={parityChannels[ri]}
-                  className="grid grid-cols-[0.95rem_1fr_1fr_1fr_1fr] items-center gap-0.5"
+                  className="grid grid-cols-[1.1rem_1fr_1fr_1fr_1fr] items-center gap-1"
                 >
-                  <span className="text-[9px] font-medium text-slate-500">{parityChannels[ri]}</span>
+                  <span className="text-[10px] font-medium tabular-nums text-slate-500">{parityChannels[ri]}</span>
                   {row.map((tint, ci) => (
                     <div
                       key={`${ri}-${ci}`}
-                      className="h-3 rounded-[2px]"
+                      className="h-2.5 rounded-[3px]"
                       style={{
-                        backgroundColor: `${tint}40`,
-                        boxShadow: `inset 0 0 0 1px ${tint}66`
+                        backgroundColor: `${tint}35`,
+                        boxShadow: `inset 0 0 0 1px ${tint}50`
                       }}
                     />
                   ))}
@@ -158,11 +152,11 @@ const HOTSPOTS: HotspotConfig[] = [
     id: 'details',
     leftPct: 18.5,
     topPct: 25,
-    title: 'View details — subscriber drawer',
+    title: 'View details',
     summary:
-      'Slide-over with two tabs: competitor pricing by date (filters keep comparisons apple-to-apple) and parity by channel vs your direct rate.',
+      'Opens a panel with two tabs: competitor pricing by date, and parity insights by channel—so you can compare rates and spot issues quickly.',
     benefit:
-      'See who undercuts you by night and channel, then fix the worst gaps without leaving UNO.'
+      'Review competitor rates and parity in one place, right from Rates & Inventory.'
   },
   {
     id: 'parity',
@@ -195,68 +189,84 @@ function ParityTintExplainer({ withTopMargin = true }: { withTopMargin?: boolean
       className={cn('space-y-2', withTopMargin && 'mt-2')}
       aria-label="Parity analysis: your direct rate vs OTA, background colors"
     >
-      <div className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5">
+      <div className="rounded-lg border border-slate-200/90 bg-white p-2.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
         <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
           Parity grid
         </p>
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border border-emerald-500/35 bg-emerald-500/[0.12] px-2 py-2.5 text-center">
-            <div className="mx-auto h-1.5 w-full max-w-[52px] rounded-full bg-emerald-400" />
-            <p className="mt-2 text-[12px] font-bold text-emerald-200">Meet</p>
-            <p className="mt-1 text-[11px] leading-snug text-slate-400">Rates match</p>
+          <div
+            className="rounded-lg border px-2 py-2.5 text-center"
+            style={{ borderColor: `${PARITY_PALETTE.meet}55`, background: `${PARITY_PALETTE.meet}22` }}
+          >
+            <div
+              className="mx-auto h-1.5 w-full max-w-[52px] rounded-full"
+              style={{ backgroundColor: PARITY_PALETTE.meet }}
+            />
+            <p className="mt-2 text-[12px] font-bold text-gray-900">Meet</p>
+            <p className="mt-1 text-[11px] leading-snug text-slate-600">Rates match</p>
           </div>
           <div
             className="rounded-lg border px-2 py-2.5 text-center"
-            style={{ borderColor: `${PARITY_WIN}55`, background: `${PARITY_WIN}18` }}
+            style={{ borderColor: `${PARITY_PALETTE.win}55`, background: `${PARITY_PALETTE.win}22` }}
           >
-            <div className="mx-auto h-1.5 w-full max-w-[52px] rounded-full bg-orange-400" />
-            <p className="mt-2 text-[12px] font-bold text-orange-200">Win</p>
-            <p className="mt-1 text-[11px] leading-snug text-slate-400">OTA higher</p>
+            <div
+              className="mx-auto h-1.5 w-full max-w-[52px] rounded-full"
+              style={{ backgroundColor: PARITY_PALETTE.win }}
+            />
+            <p className="mt-2 text-[12px] font-bold text-gray-900">Win</p>
+            <p className="mt-1 text-[11px] leading-snug text-slate-600">OTA higher</p>
           </div>
-          <div className="rounded-lg border border-red-500/35 bg-red-500/[0.12] px-2 py-2.5 text-center">
-            <div className="mx-auto h-1.5 w-full max-w-[52px] rounded-full bg-red-400" />
-            <p className="mt-2 text-[12px] font-bold text-red-200">Loss</p>
-            <p className="mt-1 text-[11px] leading-snug text-slate-400">OTA lower</p>
+          <div
+            className="rounded-lg border px-2 py-2.5 text-center"
+            style={{ borderColor: `${PARITY_PALETTE.loss}55`, background: `${PARITY_PALETTE.loss}22` }}
+          >
+            <div
+              className="mx-auto h-1.5 w-full max-w-[52px] rounded-full"
+              style={{ backgroundColor: PARITY_PALETTE.loss }}
+            />
+            <p className="mt-2 text-[12px] font-bold text-gray-900">Loss</p>
+            <p className="mt-1 text-[11px] leading-snug text-slate-600">OTA lower</p>
           </div>
         </div>
-        <p className="mt-2.5 border-t border-white/10 pt-2.5 text-center text-[11px] leading-snug text-slate-500">
+        <p className="mt-2.5 border-t border-slate-100 pt-2.5 text-center text-[11px] leading-snug text-slate-600">
           These colors appear behind each date in the grid.
         </p>
       </div>
 
       <div
-        className="overflow-hidden rounded-lg border"
-        style={{ borderColor: `${PARITY_WIN}50` }}
+        className="overflow-hidden rounded-lg border border-slate-200/80 bg-white"
+        style={{ boxShadow: `inset 0 0 0 1px ${PARITY_PALETTE.win}33` }}
       >
         <p
-          className="border-b border-white/10 px-2.5 py-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-slate-500"
-          style={{ background: `${PARITY_WIN}10` }}
+          className="border-b border-slate-200/60 px-2.5 py-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-slate-600"
+          style={{ background: `${PARITY_PALETTE.win}18` }}
         >
           Sample data · illustrative
         </p>
         <div
           className="flex items-center justify-between gap-2 px-2.5 py-2.5"
-          style={{ background: `${PARITY_WIN}12` }}
+          style={{ background: `${PARITY_PALETTE.win}14` }}
         >
           <div className="min-w-0">
-            <p className="text-[11px] text-slate-500">Example outcome</p>
+            <p className="text-[11px] text-slate-600">Example outcome</p>
             <span
               className="mt-1 inline-block rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white"
-              style={{ backgroundColor: PARITY_WIN }}
+              style={{ backgroundColor: PARITY_PALETTE.win }}
             >
               Win
             </span>
           </div>
           <div className="min-w-0 text-right">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Parity score</p>
-            <p className="text-[22px] font-bold tabular-nums leading-none text-white">76%</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-600">Parity score</p>
+            <p className="text-[22px] font-bold tabular-nums leading-none text-slate-900">76%</p>
             <p className="mt-0.5 text-[11px] text-slate-500">for demo only</p>
           </div>
         </div>
       </div>
 
-      <p className="text-[12px] leading-relaxed text-slate-400">
-        <span className="text-orange-200/95">Win</span> means one or more OTAs are priced higher than your rate.
+      <p className="text-[12px] leading-relaxed text-slate-600">
+        <span className="font-semibold text-emerald-700">Win</span> means one or more OTAs are priced higher than your
+        rate.
       </p>
     </div>
   );
@@ -272,24 +282,24 @@ function GraphPricingRows({ gp, withTopMargin = true }: { gp: GraphPricing; with
       label: 'Your rate',
       plan: gp.yourRatePlan,
       amount: gp.yourCheapest,
-      accent: 'border-blue-400/35 bg-blue-500/[0.12]',
-      bar: 'bg-blue-400'
+      accent: 'border-blue-200/90 bg-blue-50/90',
+      bar: 'bg-blue-500'
     },
     {
       key: 'min',
       label: 'Competitor low',
       plan: gp.competitorMinPlan,
       amount: gp.competitorMin,
-      accent: 'border-emerald-500/35 bg-emerald-500/[0.12]',
-      bar: 'bg-emerald-400'
+      accent: 'border-emerald-200/90 bg-emerald-50/90',
+      bar: 'bg-emerald-500'
     },
     {
       key: 'max',
       label: 'Competitor high',
       plan: gp.competitorMaxPlan,
       amount: gp.competitorMax,
-      accent: 'border-red-400/35 bg-red-500/[0.12]',
-      bar: 'bg-red-400'
+      accent: 'border-red-200/90 bg-red-50/90',
+      bar: 'bg-red-500'
     }
   ] as const;
 
@@ -300,19 +310,19 @@ function GraphPricingRows({ gp, withTopMargin = true }: { gp: GraphPricing; with
         <div key={r.key} className={cn('flex gap-2.5 rounded-lg border p-2.5', r.accent)}>
           <div className={cn('mt-0.5 h-9 w-1 shrink-0 rounded-full', r.bar)} aria-hidden />
           <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{r.label}</div>
-            <p className="mt-0.5 break-words text-[11px] leading-snug text-slate-300">{r.plan}</p>
-            <p className="mt-1 text-[16px] font-bold tabular-nums leading-none tracking-tight text-white">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">{r.label}</div>
+            <p className="mt-0.5 break-words text-[11px] leading-snug text-slate-700">{r.plan}</p>
+            <p className="mt-1 text-[16px] font-bold tabular-nums leading-none tracking-tight text-slate-900">
               {formatUsd(r.amount)}
             </p>
           </div>
         </div>
       ))}
-      <p className="rounded-md bg-white/[0.04] px-2 py-2 text-center text-[11px] font-semibold tabular-nums text-slate-300">
-        <span className="text-emerald-300/90">+{formatUsd(above)}</span>
-        <span className="mx-1 text-slate-600">vs low</span>
-        <span className="text-slate-600">·</span>
-        <span className="mx-1 text-red-300/90">−{formatUsd(below)}</span>
+      <p className="rounded-md border border-slate-100 bg-slate-50 px-2 py-2 text-center text-[11px] font-semibold tabular-nums text-slate-700">
+        <span className="text-emerald-700">+{formatUsd(above)}</span>
+        <span className="mx-1 text-slate-500">vs low</span>
+        <span className="text-slate-400">·</span>
+        <span className="mx-1 text-red-600">−{formatUsd(below)}</span>
         <span className="text-slate-500">vs high</span>
       </p>
     </div>
@@ -324,9 +334,9 @@ function HotspotTooltipBody({ h }: { h: HotspotConfig }) {
   return (
     <>
       {h.title ? (
-        <p className="text-[13px] font-semibold leading-snug tracking-tight text-white">{h.title}</p>
+        <p className="text-[13px] font-semibold leading-snug tracking-tight text-slate-900">{h.title}</p>
       ) : null}
-      {h.summary ? <p className="mt-1 text-[12px] leading-relaxed text-slate-400">{h.summary}</p> : null}
+      {h.summary ? <p className="mt-1 text-[12px] leading-relaxed text-slate-600">{h.summary}</p> : null}
       {gp ? (
         <GraphPricingRows gp={gp} withTopMargin={Boolean(h.title || h.summary)} />
       ) : h.id === 'details' ? (
@@ -335,25 +345,25 @@ function HotspotTooltipBody({ h }: { h: HotspotConfig }) {
         <ParityTintExplainer withTopMargin={Boolean(h.title || h.summary)} />
       ) : h.stats ? (
         <div
-          className="mt-2.5 rounded-lg border border-sky-400/20 bg-gradient-to-b from-sky-950/30 to-slate-950/80 px-2.5 py-2.5"
+          className="mt-2.5 rounded-lg border border-slate-200/90 bg-slate-50 px-2.5 py-2.5"
           aria-label="Example data"
         >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-300/90">
-            {h.statsSectionTitle ?? 'Snapshot'}
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#2753eb]">
+            {h.statsSectionTitle ?? 'Example'}
           </p>
           <dl className="mt-2 space-y-2">
             {h.stats.map((row) => (
-              <div key={row.label} className="grid gap-0.5 border-b border-white/5 pb-2 last:border-0 last:pb-0">
-                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{row.label}</dt>
-                <dd className="break-words text-[12px] font-medium leading-snug text-slate-100">{row.value}</dd>
+              <div key={row.label} className="grid gap-0.5 border-b border-slate-200/70 pb-2 last:border-0 last:pb-0">
+                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{row.label}</dt>
+                <dd className="break-words text-[12px] font-medium leading-snug text-slate-900">{row.value}</dd>
               </div>
             ))}
           </dl>
         </div>
       ) : null}
       {h.id !== 'details' ? (
-        <p className="mt-2.5 border-t border-white/10 pt-2 text-[12px] font-medium leading-snug text-emerald-200/95">
-          <span className="text-emerald-400/90">Why it matters · </span>
+        <p className="mt-2.5 border-t border-slate-200/80 pt-2 text-[12px] font-medium leading-snug text-slate-700">
+          <span className="text-emerald-700">Why it matters · </span>
           {h.benefit}
         </p>
       ) : null}
@@ -371,7 +381,7 @@ function hotspotAriaLabel(h: HotspotConfig): string {
     return `${prefix}${h.summary ?? ''} Parity grid: Meet rates match, Win OTA higher than your rate, Loss OTA lower. Win means one or more OTAs are priced higher than your rate. Illustrative sample: Win with parity score 76 percent. ${h.benefit}`;
   }
   if (h.id === 'details') {
-    return `${prefix}${h.summary ?? ''} Competitor price comparison: your rates vs competitors per date, similar room and plan types. Rate parity insights: win, match, or lose against each channel price per date. ${h.benefit}`;
+    return `${prefix}${h.summary ?? ''} Competitor pricing and parity insights preview. ${h.benefit}`;
   }
   return `${prefix}${h.summary ?? ''} ${h.benefit}`;
 }
@@ -456,14 +466,14 @@ function HotspotTooltipArrow({
   direction: 'down' | 'up';
   className?: string;
 }) {
-  const stroke = 'rgba(71, 85, 105, 0.45)';
+  const stroke = 'rgba(203, 213, 225, 0.95)';
   if (direction === 'down') {
     return (
       <svg
         width={TOOLTIP_ARROW_W}
         height={TOOLTIP_ARROW_H}
         viewBox={`0 0 ${TOOLTIP_ARROW_W} ${TOOLTIP_ARROW_H}`}
-        className={cn('shrink-0 text-[#0f1419]', className)}
+        className={cn('shrink-0 text-white drop-shadow-[0_1px_1px_rgba(15,23,42,0.06)]', className)}
         aria-hidden
       >
         <path
@@ -481,7 +491,7 @@ function HotspotTooltipArrow({
       width={TOOLTIP_ARROW_W}
       height={TOOLTIP_ARROW_H}
       viewBox={`0 0 ${TOOLTIP_ARROW_W} ${TOOLTIP_ARROW_H}`}
-      className={cn('shrink-0 text-[#0f1419]', className)}
+      className={cn('shrink-0 text-white drop-shadow-[0_1px_1px_rgba(15,23,42,0.06)]', className)}
       aria-hidden
     >
       <path
@@ -597,7 +607,7 @@ function HotspotWithTooltip({
         }}
         role="tooltip"
         id={`navigator-hotspot-tip-${h.id}`}
-        className="fixed flex w-[min(360px,calc(100vw-20px))] max-w-[calc(100vw-20px)] flex-col items-stretch text-left text-[13px] text-white opacity-100"
+        className="fixed flex w-[min(360px,calc(100vw-20px))] max-w-[calc(100vw-20px)] flex-col items-stretch text-left text-[13px] text-slate-900 opacity-100"
         style={{ left: tipBox.left, top: tipBox.top, zIndex: TOOLTIP_Z }}
         onPointerEnter={() => {
           clearLeaveTimer();
@@ -615,7 +625,7 @@ function HotspotWithTooltip({
             <HotspotTooltipArrow direction="up" className="-mb-px" />
           </div>
         ) : null}
-        <div className="rounded-xl border border-slate-600/40 bg-[#0f1419] px-3.5 py-3.5 shadow-2xl ring-1 ring-white/[0.08]">
+        <div className="rounded-2xl border border-slate-200/80 bg-white px-3.5 py-3.5 shadow-[0_20px_50px_-16px_rgba(15,23,42,0.28)] ring-1 ring-slate-950/[0.04]">
           <HotspotTooltipBody h={h} />
         </div>
         {tipBox.placement === 'above' ? (
@@ -685,6 +695,8 @@ type NavigatorIntelligenceTeaserImageProps = {
   onDismissPreview?: () => void;
   /** After submitting the 30-day trial form: primary CTA shows request sent; access is not instant. */
   trialRequestSubmitted?: boolean;
+  /** Shapes lead strip + overlay copy when the 30-day preview has ended vs never subscribed. */
+  navigatorUpsellContext?: 'limited' | 'trial_expired';
 };
 
 const SUPPORT_EMAIL = 'help@rategain.com';
@@ -694,10 +706,12 @@ export function NavigatorIntelligenceTeaserImage({
   onRequestTrial,
   notSubscribedLead = false,
   onDismissPreview,
-  trialRequestSubmitted = false
+  trialRequestSubmitted = false,
+  navigatorUpsellContext = 'limited'
 }: NavigatorIntelligenceTeaserImageProps) {
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [demoThanksOpen, setDemoThanksOpen] = useState(false);
+  const [upgradeRequestModalOpen, setUpgradeRequestModalOpen] = useState(false);
 
   useEffect(() => {
     if (pinnedId === null) return;
@@ -725,8 +739,17 @@ export function NavigatorIntelligenceTeaserImage({
       {notSubscribedLead ? (
         <div className="relative z-[1] border-b border-slate-200/90 bg-gradient-to-r from-slate-100 via-white to-[#eff6ff] px-3 py-2 text-center sm:px-4 sm:py-2.5">
           <p className="text-[11px] leading-snug text-slate-600 sm:text-[12px]">
-            The data below is illustrative and shows how competitor pricing and parity insights will appear after
-            subscribing.
+            {navigatorUpsellContext === 'trial_expired' ? (
+              <>
+                Continue comparing your rates with competitors and tracking parity in one place. Upgrade to restore
+                real-time insights across your dates and channels.
+              </>
+            ) : (
+              <>
+                The data below is illustrative and shows how competitor pricing and parity insights will appear after
+                subscribing.
+              </>
+            )}
           </p>
         </div>
       ) : null}
@@ -760,43 +783,67 @@ export function NavigatorIntelligenceTeaserImage({
                 'bg-slate-900/78 px-3 py-3 shadow-[0_8px_28px_rgba(0,0,0,0.38)] backdrop-blur-md sm:px-3.5 sm:py-3'
               )}
             >
-          <div className="flex w-full gap-2">
-            <Button
+          {navigatorUpsellContext === 'trial_expired' ? (
+            <button
               type="button"
-              disabled={trialRequestSubmitted}
-              aria-label={
-                trialRequestSubmitted
-                  ? 'Trial request already submitted; our team will enable access after review'
-                  : 'Start your 30-day free trial to unlock competitor insights'
-              }
+              aria-label="Request upgrade to full Navigator version"
+              className="inline-flex h-9 min-h-9 w-full min-w-0 cursor-pointer items-center justify-center rounded-md border-0 bg-[#2753eb] px-2 py-1.5 text-center text-[11px] font-semibold leading-tight text-white shadow-md transition-colors hover:bg-[#1e45c7] sm:h-10 sm:text-[12px]"
               onClick={(e) => {
                 e.stopPropagation();
-                if (!trialRequestSubmitted) onRequestTrial();
+                setUpgradeRequestModalOpen(true);
               }}
-              className="inline-flex h-9 min-h-9 flex-1 min-w-0 items-center justify-center bg-[#2753eb] px-2 py-1.5 text-center text-[10px] font-semibold leading-tight text-white shadow-md hover:bg-[#1e45c7] disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-white/90 disabled:shadow-none disabled:hover:bg-slate-600 sm:h-10 sm:text-[11px]"
             >
-              <span className="min-w-0 px-0.5">
-                {trialRequestSubmitted ? 'Request already sent' : 'Start 30 days free trial'}
-              </span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              aria-label="Request a demo"
-              onClick={(e) => {
-                e.stopPropagation();
-                setDemoThanksOpen(true);
-              }}
-              className="inline-flex h-9 min-h-9 flex-1 min-w-0 items-center justify-center whitespace-nowrap border-white/35 bg-white/[0.06] px-2 py-1.5 text-center text-[11px] font-semibold leading-tight text-white shadow-none hover:bg-white/[0.12] hover:text-white sm:h-10 sm:text-[12px]"
-            >
-              Request demo
-            </Button>
-          </div>
+              Upgrade to full version
+            </button>
+          ) : (
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                disabled={trialRequestSubmitted}
+                aria-label={
+                  trialRequestSubmitted
+                    ? 'Trial request already submitted; our team will enable access after review'
+                    : 'Start your 30-day free trial to unlock competitor insights'
+                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!trialRequestSubmitted) onRequestTrial();
+                }}
+                className="inline-flex h-9 min-h-9 flex-1 min-w-0 items-center justify-center bg-[#2753eb] px-2 py-1.5 text-center text-[10px] font-semibold leading-tight text-white shadow-md hover:bg-[#1e45c7] disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-white/90 disabled:shadow-none disabled:hover:bg-slate-600 sm:h-10 sm:text-[11px]"
+              >
+                <span className="min-w-0 px-0.5">
+                  {trialRequestSubmitted ? 'Request already sent' : 'Start 30 days free trial'}
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-label="Request a demo"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDemoThanksOpen(true);
+                }}
+                className="inline-flex h-9 min-h-9 flex-1 min-w-0 items-center justify-center whitespace-nowrap border-white/35 bg-white/[0.06] px-2 py-1.5 text-center text-[11px] font-semibold leading-tight text-white shadow-none hover:bg-white/[0.12] hover:text-white sm:h-10 sm:text-[12px]"
+              >
+                Request demo
+              </Button>
+            </div>
+          )}
           <p className="text-center text-[11px] leading-snug text-white/90 sm:text-[12px]">
-            {trialRequestSubmitted ? (
+            {trialRequestSubmitted && navigatorUpsellContext !== 'trial_expired' ? (
               <>
                 We&apos;ve received your trial request. Navigator access is turned on by our team after review, so it
                 won&apos;t appear immediately. The snapshot below stays illustrative. Questions?{' '}
+                <a
+                  href={`mailto:${SUPPORT_EMAIL}`}
+                  className="font-semibold text-white underline decoration-white/45 underline-offset-2 transition-colors hover:decoration-white"
+                >
+                  {SUPPORT_EMAIL}
+                </a>
+              </>
+            ) : navigatorUpsellContext === 'trial_expired' ? (
+              <>
+                Continue comparing rates and tracking parity. Upgrade to restore real-time insights. Need help?{' '}
                 <a
                   href={`mailto:${SUPPORT_EMAIL}`}
                   className="font-semibold text-white underline decoration-white/45 underline-offset-2 transition-colors hover:decoration-white"
@@ -821,7 +868,9 @@ export function NavigatorIntelligenceTeaserImage({
                 Hide preview
               </button>
               <p className="mt-1 text-center text-[9px] leading-snug text-white/60 sm:text-[10px]">
-                Subscribe or request a demo anytime from the blue banner at the top.
+                {navigatorUpsellContext === 'trial_expired'
+                  ? 'Upgrade anytime from the blue banner at the top, or use the button above.'
+                  : 'Subscribe or request a demo anytime from the blue banner at the top.'}
               </p>
             </div>
           ) : null}
@@ -859,9 +908,13 @@ export function NavigatorIntelligenceTeaserImage({
         </DialogContent>
         </Dialog>
 
-        {HOTSPOTS.map((h) => (
-          <HotspotWithTooltip key={h.id} h={h} pinnedId={pinnedId} setPinnedId={setPinnedId} />
-        ))}
+        <NavigatorUpgradeRequestModal open={upgradeRequestModalOpen} onOpenChange={setUpgradeRequestModalOpen} />
+
+        {navigatorUpsellContext !== 'trial_expired'
+          ? HOTSPOTS.map((h) => (
+              <HotspotWithTooltip key={h.id} h={h} pinnedId={pinnedId} setPinnedId={setPinnedId} />
+            ))
+          : null}
         </div>
       </div>
     </div>

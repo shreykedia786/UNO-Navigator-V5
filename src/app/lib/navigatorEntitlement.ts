@@ -7,9 +7,39 @@ export const STORAGE_TRIAL_REQUEST_SUBMITTED = 'unoNavigatorTrialRequestSubmitte
 /** User completed first-run gate (UNO + Navigator) — go to Rates & Inventory even without Navigator. */
 export const STORAGE_GATE_COMPLETED = 'unoNavigatorGateCompleted';
 
-export type NavigatorEntitlement = 'full' | 'trial' | 'limited';
+export type NavigatorEntitlement = 'full' | 'trial' | 'trial_expired' | 'limited';
 
 const TRIAL_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Demo / QA: if there is no real ended trial in storage yet, set `STORAGE_TRIAL_START` to 31 days ago so
+ * post-trial upgrade UX can be exercised without waiting. Skips when already subscribed.
+ */
+export function ensureExpiredTrialSampleInStorage(): void {
+  try {
+    if (localStorage.getItem(STORAGE_SUBSCRIBED) === 'true') return;
+    if (hasNavigatorTrialExpired()) return;
+    localStorage.setItem(
+      STORAGE_TRIAL_START,
+      new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString()
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+/** True when a trial start date exists and the 30-day window has fully elapsed (Navigator intelligence off). */
+export function hasNavigatorTrialExpired(): boolean {
+  try {
+    const started = localStorage.getItem(STORAGE_TRIAL_START);
+    if (!started) return false;
+    const t = new Date(started).getTime();
+    if (!Number.isFinite(t)) return false;
+    return Date.now() - t >= TRIAL_MS;
+  } catch {
+    return false;
+  }
+}
 
 export function readNavigatorEntitlement(): NavigatorEntitlement {
   try {
@@ -19,8 +49,11 @@ export function readNavigatorEntitlement(): NavigatorEntitlement {
     const started = localStorage.getItem(STORAGE_TRIAL_START);
     if (started) {
       const t = new Date(started).getTime();
-      if (Number.isFinite(t) && Date.now() - t < TRIAL_MS) {
-        return 'trial';
+      if (Number.isFinite(t)) {
+        if (Date.now() - t < TRIAL_MS) {
+          return 'trial';
+        }
+        return 'trial_expired';
       }
     }
     return 'limited';
@@ -101,6 +134,11 @@ export function navigatorIntelligenceUnlocked(entitlement: NavigatorEntitlement)
   return entitlement === 'full' || entitlement === 'trial';
 }
 
+/** Same locked charts / upsell as `limited`, but copy should reference an ended trial. */
+export function isNavigatorLimitedUpsell(entitlement: NavigatorEntitlement): boolean {
+  return entitlement === 'limited' || entitlement === 'trial_expired';
+}
+
 export function trialDaysRemaining(): number | null {
   try {
     const started = localStorage.getItem(STORAGE_TRIAL_START);
@@ -108,6 +146,7 @@ export function trialDaysRemaining(): number | null {
     const t = new Date(started).getTime();
     if (!Number.isFinite(t)) return null;
     const end = t + TRIAL_MS;
+    if (Date.now() >= end) return null;
     const left = Math.ceil((end - Date.now()) / (24 * 60 * 60 * 1000));
     return Math.max(0, left);
   } catch {

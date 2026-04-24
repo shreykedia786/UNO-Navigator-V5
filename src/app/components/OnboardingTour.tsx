@@ -8,6 +8,7 @@ import {
   BarChart3,
   Scale
 } from 'lucide-react';
+import { PARITY_PALETTE } from '@/app/lib/parityPalette';
 import { LegendIconMax, LegendIconMin, LegendIconMyRate } from './CompetitorChartLegendIcons';
 
 interface OnboardingStep {
@@ -62,21 +63,22 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   }
 ];
 
-/** Not subscribed / limited demo: welcome + locked chart snapshot with hotspots. */
+/** Not subscribed / limited demo: value-led welcome + expand row (preview mode; trial via top banner). */
 const LIMITED_ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'welcome-limited',
-    title: 'Navigator intelligence preview',
+    title: 'Stay competitive with pricing insights',
     description:
-      "You're seeing a preview of competitor pricing and parity insights. Start your free trial from the top banner to unlock full access.",
+      'Preview how your rates compare with competitors and where you stand on parity across dates.',
     targetSelector: '',
     position: 'bottom',
     highlightPadding: 0
   },
   {
     id: 'expand-room-limited',
-    title: 'Expand this room',
-    description: 'Tap the chevron to open the row. You will see a Navigator snapshot with competitor rate comparison.',
+    title: 'Explore pricing insights',
+    description:
+      'Tap a row to compare your rates with competitors and view your parity for each date.',
     targetSelector: '[data-tour="room-chevron-icon"]',
     position: 'right',
     highlightPadding: 6
@@ -130,9 +132,9 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
   };
 
   const getTooltipHeight = () => {
-    if (isWelcomeStep) return step.id === 'welcome-limited' ? 430 : 460;
+    if (isWelcomeStep) return step.id === 'welcome-limited' ? 480 : 460;
     if (step.id === 'find-it') return 320;
-    if (step.id === 'expand-room-limited') return 220;
+    if (step.id === 'expand-room-limited') return 280;
     if (step.id === 'competitor-graph') return 300;
     if (step.id === 'parity-colors') return 340;
     if (step.id === 'drawer-preview') return 335;
@@ -396,7 +398,7 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
               <div>
                 <h3 className="text-[15px] font-bold leading-tight mb-1">{step.title}</h3>
                 <p className="text-[11px] text-white/80">
-                  Step {currentStep + 1} of {steps.length}
+                  {variant === 'limited' ? `Step ${currentStep + 1} of 2` : `Step ${currentStep + 1} of ${steps.length}`}
                 </p>
               </div>
             </div>
@@ -416,13 +418,22 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
           }`}
         >
           {!isWelcomeStep && step.description ? (
-            <p
-              className={`text-[13px] leading-relaxed ${
-                step.id === 'find-it' || step.id === 'expand-room-limited' ? 'text-gray-800 font-medium' : 'text-gray-700'
-              }`}
-            >
-              {step.description}
-            </p>
+            <>
+              <p
+                className={`text-[13px] leading-relaxed ${
+                  step.id === 'find-it' || step.id === 'expand-room-limited'
+                    ? 'text-gray-800 font-medium'
+                    : 'text-gray-700'
+                }`}
+              >
+                {step.description}
+              </p>
+              {step.id === 'expand-room-limited' ? (
+                <p className="mt-4 text-center text-[11px] leading-snug text-slate-500">
+                  Unlock full insights from the top banner when you&apos;re ready.
+                </p>
+              ) : null}
+            </>
           ) : null}
 
           {/* Welcome — feature spotlight */}
@@ -438,8 +449,11 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
                           <BarChart3 className="h-5 w-5" strokeWidth={2} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[13px] leading-relaxed text-slate-700">
-                            Compare your rates with competitors across dates to identify pricing gaps.
+                          <h4 className="text-[13px] font-bold leading-snug text-slate-900">
+                            Compare your rates with competitors
+                          </h4>
+                          <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                            Identify pricing differences across dates and respond faster.
                           </p>
                         </div>
                       </div>
@@ -450,8 +464,11 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
                           <Scale className="h-5 w-5" strokeWidth={2} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[13px] leading-relaxed text-slate-700">
-                            Track where you win, meet, or lose across OTAs.
+                          <h4 className="text-[13px] font-bold leading-snug text-slate-900">
+                            Track rate parity across OTAs
+                          </h4>
+                          <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                            See where you&apos;re winning, matching, or losing at a glance.
                           </p>
                         </div>
                       </div>
@@ -492,9 +509,16 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
                   </>
                 )}
               </div>
-              <p className="text-center text-[10px] leading-snug text-slate-400">
-                {steps.length <= 2 ? '~30 seconds' : '~1 minute'} · {steps.length} quick step{steps.length === 1 ? '' : 's'}
-              </p>
+              {step.id === 'welcome-limited' ? (
+                <p className="text-center text-[11px] leading-snug text-slate-500">
+                  Start your free trial from the top banner to unlock full access.
+                </p>
+              ) : (
+                <p className="text-center text-[10px] leading-snug text-slate-400">
+                  {steps.length <= 2 ? '~30 seconds' : '~1 minute'} · {steps.length} quick step
+                  {steps.length === 1 ? '' : 's'}
+                </p>
+              )}
             </div>
           )}
 
@@ -506,18 +530,45 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
               </p>
               <div className="rounded-xl border border-slate-200/90 bg-white p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-lg border border-emerald-200/90 bg-emerald-50/90 px-2 py-2.5 text-center">
-                    <div className="mx-auto h-1.5 w-full max-w-[56px] rounded-full bg-emerald-400" />
+                  <div
+                    className="rounded-lg border px-2 py-2.5 text-center"
+                    style={{
+                      borderColor: `${PARITY_PALETTE.meet}99`,
+                      backgroundColor: `${PARITY_PALETTE.meet}2e`
+                    }}
+                  >
+                    <div
+                      className="mx-auto h-1.5 w-full max-w-[56px] rounded-full"
+                      style={{ backgroundColor: PARITY_PALETTE.meet }}
+                    />
                     <p className="mt-2 text-[11px] font-bold text-gray-900">Meet</p>
                     <p className="mt-0.5 text-[9px] leading-snug text-gray-600">Rates match</p>
                   </div>
-                  <div className="rounded-lg border border-orange-200/90 bg-orange-50/90 px-2 py-2.5 text-center">
-                    <div className="mx-auto h-1.5 w-full max-w-[56px] rounded-full bg-orange-400" />
+                  <div
+                    className="rounded-lg border px-2 py-2.5 text-center"
+                    style={{
+                      borderColor: `${PARITY_PALETTE.win}99`,
+                      backgroundColor: `${PARITY_PALETTE.win}2e`
+                    }}
+                  >
+                    <div
+                      className="mx-auto h-1.5 w-full max-w-[56px] rounded-full"
+                      style={{ backgroundColor: PARITY_PALETTE.win }}
+                    />
                     <p className="mt-2 text-[11px] font-bold text-gray-900">Win</p>
                     <p className="mt-0.5 text-[9px] leading-snug text-gray-600">OTA higher</p>
                   </div>
-                  <div className="rounded-lg border border-red-200/90 bg-red-50/90 px-2 py-2.5 text-center">
-                    <div className="mx-auto h-1.5 w-full max-w-[56px] rounded-full bg-red-400" />
+                  <div
+                    className="rounded-lg border px-2 py-2.5 text-center"
+                    style={{
+                      borderColor: `${PARITY_PALETTE.loss}99`,
+                      backgroundColor: `${PARITY_PALETTE.loss}2e`
+                    }}
+                  >
+                    <div
+                      className="mx-auto h-1.5 w-full max-w-[56px] rounded-full"
+                      style={{ backgroundColor: PARITY_PALETTE.loss }}
+                    />
                     <p className="mt-2 text-[11px] font-bold text-gray-900">Loss</p>
                     <p className="mt-0.5 text-[9px] leading-snug text-gray-600">OTA lower</p>
                   </div>

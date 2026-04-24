@@ -4,6 +4,7 @@ import { Header } from '@/app/components/Header';
 import { PropertyInventoryTable } from '@/app/components/PropertyInventoryTable';
 import { OnboardingTour, ONBOARDING_STORAGE_KEYS } from '@/app/components/OnboardingTour';
 import { NavigatorAccessGate } from '@/app/components/NavigatorSubscriptionGate';
+import { NavigatorUpgradeRequestModal } from '@/app/components/NavigatorUpgradeRequestModal';
 import { StartFreeTrialModal } from '@/app/components/StartFreeTrialModal';
 import { Button } from '@/app/components/ui/button';
 import {
@@ -17,13 +18,17 @@ import {
   clearNavigatorLockedPreviewDismiss,
   hasNavigatorTrialRequestSubmitted,
   markNavigatorTrialRequestSubmitted,
+  ensureExpiredTrialSampleInStorage,
+  isNavigatorLimitedUpsell,
+  markNavigatorGateCompleted,
+  STORAGE_SUBSCRIBED,
   type NavigatorEntitlement
 } from '@/app/lib/navigatorEntitlement';
 
 type AccessScreen = 'gate' | 'main';
 
 function initialAccessScreen(): AccessScreen {
-  // Every load / refresh: start on the two-CTA gate; each CTA clears the matching tour flag for a fresh onboarding.
+  // Every load / refresh: start on the access gate (three paths when a prior trial has expired).
   return 'gate';
 }
 
@@ -47,13 +52,15 @@ function NavigatorLimitedBanner({
   lockedNavigatorPreviewDismissed,
   onRestoreNavigatorChartPreview,
   onDismiss,
-  trialRequestSubmitted
+  trialRequestSubmitted,
+  upsellContext
 }: {
   onStartTrial: () => void;
   lockedNavigatorPreviewDismissed?: boolean;
   onRestoreNavigatorChartPreview?: () => void;
   onDismiss: () => void;
   trialRequestSubmitted: boolean;
+  upsellContext: 'standard' | 'trial_ended';
 }) {
   const dismiss = () => {
     try {
@@ -76,9 +83,18 @@ function NavigatorLimitedBanner({
       </button>
       <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-center gap-2 text-center sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3 sm:gap-y-2 sm:text-left">
         <p className="max-w-[920px] font-normal leading-snug text-white/95 sm:leading-tight">
-          <span aria-hidden>👉 </span>
-          Want to stay competitive on pricing? Compare your rates with competitors and track your parity to make
-          smarter pricing decisions
+          {upsellContext === 'trial_ended' ? (
+            <>
+              Your Navigator trial has ended. Upgrade to continue tracking live competitor pricing and parity
+              insights.
+            </>
+          ) : (
+            <>
+              <span aria-hidden>👉 </span>
+              Want to stay competitive on pricing? Compare your rates with competitors and track your parity to make
+              smarter pricing decisions
+            </>
+          )}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2 sm:shrink-0">
           <span className="hidden select-none text-white/80 sm:inline" aria-hidden>
@@ -88,11 +104,15 @@ function NavigatorLimitedBanner({
             type="button"
             size="sm"
             variant="outline"
-            disabled={trialRequestSubmitted}
+            disabled={upsellContext === 'trial_ended' ? false : trialRequestSubmitted}
             className="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded border border-white bg-transparent px-4 text-[14px] font-medium text-white shadow-none hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:border-white/25 disabled:bg-white/[0.04] disabled:text-white/55 disabled:hover:bg-white/[0.04] sm:w-auto"
             onClick={onStartTrial}
           >
-            {trialRequestSubmitted ? 'Request already sent' : 'Start your free 30-day trial'}
+            {upsellContext === 'trial_ended'
+              ? 'Upgrade to full version'
+              : trialRequestSubmitted
+                ? 'Request already sent'
+                : 'Start your free 30-day trial'}
           </Button>
           {lockedNavigatorPreviewDismissed && onRestoreNavigatorChartPreview ? (
             <button
@@ -114,6 +134,7 @@ export default function App() {
   const [entitlement, setEntitlement] = useState<NavigatorEntitlement>(() => readNavigatorEntitlement());
   const [showOnboardingTour, setShowOnboardingTour] = useState(false);
   const [trialModalOpen, setTrialModalOpen] = useState(false);
+  const [navigatorUpgradeModalOpen, setNavigatorUpgradeModalOpen] = useState(false);
   const [trialRequestSubmitted, setTrialRequestSubmitted] = useState(() => hasNavigatorTrialRequestSubmitted());
   const [lockedNavigatorPreviewDismissed, setLockedNavigatorPreviewDismissed] = useState(
     () => isNavigatorLockedPreviewDismissed()
@@ -180,6 +201,37 @@ export default function App() {
     syncEntitlement();
   }, [syncEntitlement]);
 
+  /** Post-trial path: gate → main with `trial_expired` upsell. Seeds a sample ended trial locally when none exists (demo). */
+  const enterMainAfterTrialExpired = () => {
+    ensureExpiredTrialSampleInStorage();
+    try {
+      /* Otherwise `readNavigatorEntitlement` short-circuits to `full` and unlocks subscriber charts. */
+      localStorage.removeItem(STORAGE_SUBSCRIBED);
+    } catch {
+      /* ignore */
+    }
+    try {
+      /* User already used UNO during trial — do not re-run either onboarding tour. */
+      localStorage.setItem(ONBOARDING_STORAGE_KEYS.limited, 'true');
+      localStorage.setItem(ONBOARDING_STORAGE_KEYS.full, 'true');
+    } catch {
+      /* ignore */
+    }
+    try {
+      sessionStorage.removeItem(LIMITED_BANNER_DISMISS_KEY);
+    } catch {
+      /* ignore */
+    }
+    setLimitedBannerDismissed(false);
+    clearNavigatorLockedPreviewDismiss();
+    setLockedNavigatorPreviewDismissed(false);
+    setPreviewDismissGuidanceVisible(false);
+    setShowOnboardingTour(false);
+    markNavigatorGateCompleted();
+    syncEntitlement();
+    setAccessScreen('main');
+  };
+
   /** Not subscribed: stay in UNO Rates & Inventory; intelligence stays off until trial or paid Navigator. */
   const enterMainWithoutNavigator = () => {
     try {
@@ -205,6 +257,7 @@ export default function App() {
 
   useEffect(() => {
     if (accessScreen !== 'main') return;
+    if (entitlement === 'trial_expired') return;
 
     const storageKey =
       entitlement === 'limited' ? ONBOARDING_STORAGE_KEYS.limited : ONBOARDING_STORAGE_KEYS.full;
@@ -241,31 +294,51 @@ export default function App() {
       <NavigatorAccessGate
         onNotSubscribed={enterMainWithoutNavigator}
         onAlreadySubscribed={enterMainAsFullSubscriber}
+        onTrialExpiredContinue={enterMainAfterTrialExpired}
       />
     );
   }
 
+  const limitedLikeUpsell = isNavigatorLimitedUpsell(entitlement);
+
   return (
     <div className="min-h-screen bg-[#f5f5f5] w-full">
-      {entitlement === 'limited' && !limitedBannerDismissed ? (
+      {limitedLikeUpsell && !limitedBannerDismissed ? (
         <NavigatorLimitedBanner
           onStartTrial={() => {
+            if (entitlement === 'trial_expired') {
+              setNavigatorUpgradeModalOpen(true);
+              return;
+            }
             if (!trialRequestSubmitted) setTrialModalOpen(true);
           }}
           lockedNavigatorPreviewDismissed={lockedNavigatorPreviewDismissed}
           onRestoreNavigatorChartPreview={handleRestoreLockedNavigatorPreview}
           onDismiss={handleLimitedBannerDismiss}
           trialRequestSubmitted={trialRequestSubmitted}
+          upsellContext={entitlement === 'trial_expired' ? 'trial_ended' : 'standard'}
         />
       ) : null}
-      {entitlement === 'limited' &&
+      {limitedLikeUpsell &&
       lockedNavigatorPreviewDismissed &&
       previewDismissGuidanceVisible ? (
         <div className="w-full shrink-0 border-b border-sky-200/90 bg-sky-50 px-4 py-2.5 sm:px-[50px]">
           <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-center gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <p className="max-w-3xl text-center text-[12px] leading-snug text-sky-950 sm:text-left sm:text-[13px]">
               <span className="font-semibold">Preview hidden.</span>{' '}
-              {limitedBannerDismissed ? (
+              {entitlement === 'trial_expired' ? (
+                limitedBannerDismissed ? (
+                  <>
+                    Use the Navigator intelligence section below to bring the sample preview back, or upgrade from the
+                    blue banner at the top.
+                  </>
+                ) : (
+                  <>
+                    When you are ready to upgrade, use the blue Navigator banner at the top or the upgrade option in
+                    the intelligence section below.
+                  </>
+                )
+              ) : limitedBannerDismissed ? (
                 <>
                   Use the Navigator intelligence section in the table below to start a free trial or bring the
                   competitor chart preview back.
@@ -291,6 +364,7 @@ export default function App() {
       <Header
         onUnoLogoClick={() => {
           setTrialModalOpen(false);
+          setNavigatorUpgradeModalOpen(false);
           setShowOnboardingTour(false);
           clearNavigatorLockedPreviewDismiss();
           setLockedNavigatorPreviewDismissed(false);
@@ -301,6 +375,7 @@ export default function App() {
             /* ignore */
           }
           setLimitedBannerDismissed(false);
+          setEntitlement(readNavigatorEntitlement());
           setAccessScreen('gate');
         }}
       />
@@ -310,23 +385,26 @@ export default function App() {
           onRequestNavigatorTrial={() => {
             if (!trialRequestSubmitted) setTrialModalOpen(true);
           }}
-          lockedNavigatorPreviewDismissed={entitlement === 'limited' ? lockedNavigatorPreviewDismissed : false}
-          onDismissLockedNavigatorPreview={
-            entitlement === 'limited' ? handleDismissLockedNavigatorPreview : undefined
-          }
+          lockedNavigatorPreviewDismissed={limitedLikeUpsell ? lockedNavigatorPreviewDismissed : false}
+          onDismissLockedNavigatorPreview={limitedLikeUpsell ? handleDismissLockedNavigatorPreview : undefined}
           navigatorTrialRequestSubmitted={trialRequestSubmitted}
+          navigatorUpsellContext={entitlement === 'trial_expired' ? 'trial_expired' : 'limited'}
         />
       </div>
 
       {showOnboardingTour && (
         <OnboardingTour
-          variant={entitlement === 'limited' ? 'limited' : 'full'}
+          variant={entitlement === 'limited' || entitlement === 'trial_expired' ? 'limited' : 'full'}
           onComplete={handleTourComplete}
           onStepChange={handleTourStepChange}
         />
       )}
 
       <StartFreeTrialModal open={trialModalOpen} onOpenChange={setTrialModalOpen} onSuccess={handleTrialRequestSubmitted} />
+      <NavigatorUpgradeRequestModal
+        open={navigatorUpgradeModalOpen}
+        onOpenChange={setNavigatorUpgradeModalOpen}
+      />
     </div>
   );
 }
