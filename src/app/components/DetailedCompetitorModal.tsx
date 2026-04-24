@@ -55,6 +55,39 @@ function formatInsightDate(d: { day: string; date: string; month: string }) {
   return `${d.day}, ${d.date} ${d.month}`;
 }
 
+/** In-table date window controls — keeps chevrons aligned to first/last date columns at any width. */
+function DateColumnNavButton({
+  direction,
+  onClick,
+  disabled,
+  label,
+  className
+}: {
+  direction: 'prev' | 'next';
+  onClick: () => void;
+  disabled: boolean;
+  label: string;
+  /** Extra classes on the button (e.g. absolute positioning in parity header). */
+  className?: string;
+}) {
+  const Icon = direction === 'prev' ? ChevronLeft : ChevronRight;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className={cn(
+        'shrink-0 w-7 h-10 flex items-center justify-center bg-white border border-[#e0e0e0] hover:bg-gray-50 transition-colors',
+        disabled && 'opacity-50 cursor-not-allowed',
+        className
+      )}
+    >
+      <Icon className="w-4 h-4 text-[#999999]" />
+    </button>
+  );
+}
+
 function getScrollableAncestors(el: HTMLElement | null): HTMLElement[] {
   const out: HTMLElement[] = [];
   let p: HTMLElement | null = el?.parentElement ?? null;
@@ -1358,50 +1391,8 @@ export function DetailedCompetitorModal({
           </div>
         </div>
 
-        {/* Content with Navigation Arrows — competitor tab uses inner vertical scroll for compset rows only */}
+        {/* Content — date window prev/next live in first/last date header cells so layout is resolution-safe */}
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-          {/* Previous Arrow - Positioned based on active tab */}
-          {activeTab === 'competitor' && (
-            <button
-              onClick={handlePrevious}
-              disabled={!canGoPrevious}
-              className={`absolute left-[180px] top-[14.5px] z-20 w-7 h-10 flex items-center justify-center bg-white border border-[#e0e0e0] hover:bg-gray-50 transition-colors ${!canGoPrevious ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <ChevronLeft className="w-4 h-4 text-[#999999]" />
-            </button>
-          )}
-
-          {activeTab === 'parity' && (
-            <button
-              onClick={handlePrevious}
-              disabled={!canGoPrevious}
-              className={`absolute left-[1160px] top-[10px] z-20 w-7 h-10 flex items-center justify-center bg-white border border-[#e0e0e0] hover:bg-gray-50 transition-colors ${!canGoPrevious ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <ChevronLeft className="w-4 h-4 text-[#999999]" />
-            </button>
-          )}
-
-          {/* Next Arrow - Positioned on the right side of the last date column */}
-          {activeTab === 'competitor' && (
-            <button
-              onClick={handleNext}
-              disabled={!canGoNext}
-              className={`absolute right-[10px] top-[14.5px] z-20 w-7 h-10 flex items-center justify-center bg-white border border-[#e0e0e0] hover:bg-gray-50 transition-colors ${!canGoNext ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <ChevronRight className="w-4 h-4 text-[#999999]" />
-            </button>
-          )}
-
-          {activeTab === 'parity' && (
-            <button
-              onClick={handleNext}
-              disabled={!canGoNext}
-              className={`absolute right-[10px] top-[14.5px] z-20 w-7 h-10 flex items-center justify-center bg-white border border-[#e0e0e0] hover:bg-gray-50 transition-colors ${!canGoNext ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <ChevronRight className="w-4 h-4 text-[#999999]" />
-            </button>
-          )}
-
           {/* Competitor Rate Analysis: dates / your rates / chart / avg stay fixed; compset rows scroll vertically */}
           {activeTab === 'competitor' && (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -1424,13 +1415,42 @@ export function DetailedCompetitorModal({
                           {/* Empty cell for the first column */}
                         </th>
                         {visibleDates.map((date, idx) => {
+                          const isFirst = idx === 0;
+                          const isLast = idx === visibleDates.length - 1;
                           return (
                             <th key={idx} className="px-3 py-2.5 border-r border-[#e0e0e0] bg-[#f5f5f5]">
-                              <div className="text-[12px] font-semibold text-[#333333]">{date.day}</div>
-                              <div className="mt-0.5 flex items-center justify-center gap-1">
-                                <span className="text-[11px] text-gray-600">
-                                  {date.date} {date.month}
-                                </span>
+                              <div
+                                className={cn(
+                                  'flex items-center justify-center gap-1',
+                                  (isFirst || isLast) && 'relative'
+                                )}
+                              >
+                                {isFirst && (
+                                  <DateColumnNavButton
+                                    direction="prev"
+                                    label="Show earlier dates"
+                                    onClick={handlePrevious}
+                                    disabled={!canGoPrevious}
+                                    className="absolute left-[-9px] top-1/2 z-10 -translate-y-1/2"
+                                  />
+                                )}
+                                <div className="min-w-0 text-center">
+                                  <div className="text-[12px] font-semibold text-[#333333]">{date.day}</div>
+                                  <div className="mt-0.5 flex items-center justify-center gap-1">
+                                    <span className="text-[11px] text-gray-600">
+                                      {date.date} {date.month}
+                                    </span>
+                                  </div>
+                                </div>
+                                {isLast && (
+                                  <DateColumnNavButton
+                                    direction="next"
+                                    label="Show later dates"
+                                    onClick={handleNext}
+                                    disabled={!canGoNext}
+                                    className="absolute right-[-2px] top-1/2 z-10 -translate-y-1/2"
+                                  />
+                                )}
                               </div>
                             </th>
                           );
@@ -1675,6 +1695,10 @@ export function DetailedCompetitorModal({
               resolveParityYourRatePlan={resolveParityYourRatePlan}
               showTooltipRatePlanNames={inclusionFilter === 'any'}
               rateCurrency={rateCurrency}
+              onDateNavigatePrevious={handlePrevious}
+              onDateNavigateNext={handleNext}
+              canNavigatePrevious={canGoPrevious}
+              canNavigateNext={canGoNext}
             />
           )}
         </div>
@@ -1725,7 +1749,11 @@ function ParityAnalysisContent({
   resolveParityCellRatePlan,
   resolveParityYourRatePlan,
   showTooltipRatePlanNames,
-  rateCurrency
+  rateCurrency,
+  onDateNavigatePrevious,
+  onDateNavigateNext,
+  canNavigatePrevious,
+  canNavigateNext
 }: {
   visibleDates: Array<{ day: string; date: string; month: string }>;
   visibleRates: number[];
@@ -1737,6 +1765,10 @@ function ParityAnalysisContent({
   /** When false, OTA rate tooltips omit rate plan names (specific plan filter = apple-to-apple). */
   showTooltipRatePlanNames: boolean;
   rateCurrency: DetailedCompetitorRateCurrency;
+  onDateNavigatePrevious: () => void;
+  onDateNavigateNext: () => void;
+  canNavigatePrevious: boolean;
+  canNavigateNext: boolean;
 }) {
   const currencySymbol = rateCurrency.symbol;
 
@@ -2023,12 +2055,45 @@ function ParityAnalysisContent({
             <th className="px-2 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
               <div className="text-[12px] font-semibold text-[#333333]">Parity Score</div>
             </th>
-            {visibleDates.map((date, idx) => (
-              <th key={idx} className="px-2 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
-                <div className="text-[11px] font-bold text-[#333333]">{date.day}</div>
-                <div className="text-[11px] font-semibold text-[#333333] mt-0.5">{date.date} {date.month}</div>
-              </th>
-            ))}
+            {visibleDates.map((date, idx) => {
+              const isFirst = idx === 0;
+              const isLast = idx === visibleDates.length - 1;
+              return (
+                <th key={idx} className="px-2 py-3 border-r border-[#e0e0e0] bg-[#f5f5f5]">
+                  <div
+                    className={cn(
+                      'flex items-center justify-center gap-1',
+                      (isFirst || isLast) && 'relative'
+                    )}
+                  >
+                    {isFirst && (
+                      <DateColumnNavButton
+                        direction="prev"
+                        label="Show earlier dates"
+                        onClick={onDateNavigatePrevious}
+                        disabled={!canNavigatePrevious}
+                        className="absolute left-[-9px] top-1/2 z-10 -translate-y-1/2"
+                      />
+                    )}
+                    <div className="min-w-0 text-center">
+                      <div className="text-[11px] font-bold text-[#333333]">{date.day}</div>
+                      <div className="text-[11px] font-semibold text-[#333333] mt-0.5">
+                        {date.date} {date.month}
+                      </div>
+                    </div>
+                    {isLast && (
+                      <DateColumnNavButton
+                        direction="next"
+                        label="Show later dates"
+                        onClick={onDateNavigateNext}
+                        disabled={!canNavigateNext}
+                        className="absolute right-[-2px] top-1/2 z-10 -translate-y-1/2"
+                      />
+                    )}
+                  </div>
+                </th>
+              );
+            })}
           </tr>
         </thead>
 
