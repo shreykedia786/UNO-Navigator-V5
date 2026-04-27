@@ -17,6 +17,27 @@ const NAVIGATOR_LOGO_BRAND_FILTER =
 
 const TRIAL_THANKS_AUTO_CLOSE_MS = 3600;
 
+const ERR_C1_NAME = 'Please enter at least one competitor property.';
+const ERR_C1_URL_EMPTY = 'Please enter a website URL for competitor 1.';
+const ERR_C1_URL_BAD =
+  'Please enter a valid URL for competitor 1 (for example https://www.booking.com/hotel/...).';
+const ERR_C2_PAIR = 'For competitor 2, enter both property name and URL, or leave both fields blank.';
+const ERR_C2_URL_BAD = 'Please enter a valid URL for competitor 2.';
+const ERR_C3_PAIR = 'For competitor 3, enter both property name and URL, or leave both fields blank.';
+const ERR_C3_URL_BAD = 'Please enter a valid URL for competitor 3.';
+
+function isValidHttpUrl(input: string): boolean {
+  const raw = input.trim();
+  if (!raw) return false;
+  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const u = new URL(candidate);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 type StartFreeTrialModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,6 +56,9 @@ export function StartFreeTrialModal({
   const [competitor1, setCompetitor1] = useState('');
   const [competitor2, setCompetitor2] = useState('');
   const [competitor3, setCompetitor3] = useState('');
+  const [competitor1Url, setCompetitor1Url] = useState('');
+  const [competitor2Url, setCompetitor2Url] = useState('');
+  const [competitor3Url, setCompetitor3Url] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [thanksOpen, setThanksOpen] = useState(false);
   const pendingSuccessRef = useRef(false);
@@ -44,6 +68,9 @@ export function StartFreeTrialModal({
     setCompetitor1('');
     setCompetitor2('');
     setCompetitor3('');
+    setCompetitor1Url('');
+    setCompetitor2Url('');
+    setCompetitor3Url('');
     setError(null);
   }, []);
 
@@ -70,10 +97,41 @@ export function StartFreeTrialModal({
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const c1 = competitor1.trim();
+    const c1u = competitor1Url.trim();
+    const c2 = competitor2.trim();
+    const c2u = competitor2Url.trim();
+    const c3 = competitor3.trim();
+    const c3u = competitor3Url.trim();
+
     if (!c1) {
-      setError('Please enter at least one competitor property.');
+      setError(ERR_C1_NAME);
       return;
     }
+    if (!c1u) {
+      setError(ERR_C1_URL_EMPTY);
+      return;
+    }
+    if (!isValidHttpUrl(c1u)) {
+      setError(ERR_C1_URL_BAD);
+      return;
+    }
+    if ((c2 && !c2u) || (!c2 && c2u)) {
+      setError(ERR_C2_PAIR);
+      return;
+    }
+    if (c2 && c2u && !isValidHttpUrl(c2u)) {
+      setError(ERR_C2_URL_BAD);
+      return;
+    }
+    if ((c3 && !c3u) || (!c3 && c3u)) {
+      setError(ERR_C3_PAIR);
+      return;
+    }
+    if (c3 && c3u && !isValidHttpUrl(c3u)) {
+      setError(ERR_C3_URL_BAD);
+      return;
+    }
+
     setError(null);
     pendingSuccessRef.current = true;
     onOpenChange(false);
@@ -145,47 +203,120 @@ export function StartFreeTrialModal({
                 <div className="border-t border-[#f1f5f9] pt-4">
                   <h3 className="text-[14px] font-bold text-[#374151]">Please add up to 3 competitors</h3>
                   <p className="mt-1 text-[12px] leading-relaxed text-[#9ca3af]">
-                    We need your competitor details to set up your account.
+                    We need each property’s name and a public listing or website URL so we can match the
+                    correct competitor (names alone are often ambiguous).
                   </p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="trial-comp-1" className="text-[13px] font-medium text-[#374151]">
+                <div className="space-y-2 rounded-lg border border-[#f1f5f9] bg-[#fafbfc] p-3">
+                  <p className="text-[13px] font-medium text-[#374151]">
                     Competitor 1<span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="trial-comp-1"
-                    value={competitor1}
-                    onChange={(e) => setCompetitor1(e.target.value)}
-                    placeholder="Enter competitor property name"
-                    className="h-10 border-[#e5e7eb] bg-white text-[13px] placeholder:text-[#9ca3af]"
-                    aria-invalid={!!error && !competitor1.trim()}
-                    aria-describedby={error ? 'trial-comp-error' : undefined}
-                  />
+                  </p>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="trial-comp-1" className="text-[12px] font-medium text-[#64748b]">
+                      Property name<span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="trial-comp-1"
+                      value={competitor1}
+                      onChange={(e) => setCompetitor1(e.target.value)}
+                      placeholder="Enter competitor property name"
+                      className="h-10 border-[#e5e7eb] bg-white text-[13px] placeholder:text-[#9ca3af]"
+                      aria-invalid={error === ERR_C1_NAME}
+                      aria-describedby={error ? 'trial-comp-error' : undefined}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="trial-comp-1-url" className="text-[12px] font-medium text-[#64748b]">
+                      Website URL<span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="trial-comp-1-url"
+                      type="text"
+                      inputMode="url"
+                      autoComplete="url"
+                      value={competitor1Url}
+                      onChange={(e) => setCompetitor1Url(e.target.value)}
+                      placeholder="https://"
+                      className="h-10 border-[#e5e7eb] bg-white text-[13px] placeholder:text-[#9ca3af]"
+                      aria-invalid={error === ERR_C1_URL_EMPTY || error === ERR_C1_URL_BAD}
+                      aria-describedby={error ? 'trial-comp-error' : undefined}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="trial-comp-2" className="text-[13px] font-medium text-[#374151]">
+
+                <div className="space-y-2 rounded-lg border border-[#f1f5f9] bg-[#fafbfc] p-3">
+                  <p className="text-[13px] font-medium text-[#374151]">
                     Competitor 2 <span className="font-normal text-[#9ca3af]">(optional)</span>
-                  </Label>
-                  <Input
-                    id="trial-comp-2"
-                    value={competitor2}
-                    onChange={(e) => setCompetitor2(e.target.value)}
-                    placeholder="Enter competitor property name"
-                    className="h-10 border-[#e5e7eb] bg-white text-[13px] placeholder:text-[#9ca3af]"
-                  />
+                  </p>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="trial-comp-2" className="text-[12px] font-medium text-[#64748b]">
+                      Property name
+                    </Label>
+                    <Input
+                      id="trial-comp-2"
+                      value={competitor2}
+                      onChange={(e) => setCompetitor2(e.target.value)}
+                      placeholder="Enter competitor property name"
+                      className="h-10 border-[#e5e7eb] bg-white text-[13px] placeholder:text-[#9ca3af]"
+                      aria-invalid={error === ERR_C2_PAIR || error === ERR_C2_URL_BAD}
+                      aria-describedby={error ? 'trial-comp-error' : undefined}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="trial-comp-2-url" className="text-[12px] font-medium text-[#64748b]">
+                      Website URL
+                    </Label>
+                    <Input
+                      id="trial-comp-2-url"
+                      type="text"
+                      inputMode="url"
+                      autoComplete="url"
+                      value={competitor2Url}
+                      onChange={(e) => setCompetitor2Url(e.target.value)}
+                      placeholder="https://"
+                      className="h-10 border-[#e5e7eb] bg-white text-[13px] placeholder:text-[#9ca3af]"
+                      aria-invalid={error === ERR_C2_PAIR || error === ERR_C2_URL_BAD}
+                      aria-describedby={error ? 'trial-comp-error' : undefined}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="trial-comp-3" className="text-[13px] font-medium text-[#374151]">
+
+                <div className="space-y-2 rounded-lg border border-[#f1f5f9] bg-[#fafbfc] p-3">
+                  <p className="text-[13px] font-medium text-[#374151]">
                     Competitor 3 <span className="font-normal text-[#9ca3af]">(optional)</span>
-                  </Label>
-                  <Input
-                    id="trial-comp-3"
-                    value={competitor3}
-                    onChange={(e) => setCompetitor3(e.target.value)}
-                    placeholder="Enter competitor property name"
-                    className="h-10 border-[#e5e7eb] bg-white text-[13px] placeholder:text-[#9ca3af]"
-                  />
+                  </p>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="trial-comp-3" className="text-[12px] font-medium text-[#64748b]">
+                      Property name
+                    </Label>
+                    <Input
+                      id="trial-comp-3"
+                      value={competitor3}
+                      onChange={(e) => setCompetitor3(e.target.value)}
+                      placeholder="Enter competitor property name"
+                      className="h-10 border-[#e5e7eb] bg-white text-[13px] placeholder:text-[#9ca3af]"
+                      aria-invalid={error === ERR_C3_PAIR || error === ERR_C3_URL_BAD}
+                      aria-describedby={error ? 'trial-comp-error' : undefined}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="trial-comp-3-url" className="text-[12px] font-medium text-[#64748b]">
+                      Website URL
+                    </Label>
+                    <Input
+                      id="trial-comp-3-url"
+                      type="text"
+                      inputMode="url"
+                      autoComplete="url"
+                      value={competitor3Url}
+                      onChange={(e) => setCompetitor3Url(e.target.value)}
+                      placeholder="https://"
+                      className="h-10 border-[#e5e7eb] bg-white text-[13px] placeholder:text-[#9ca3af]"
+                      aria-invalid={error === ERR_C3_PAIR || error === ERR_C3_URL_BAD}
+                      aria-describedby={error ? 'trial-comp-error' : undefined}
+                    />
+                  </div>
                 </div>
 
                 {error ? (
