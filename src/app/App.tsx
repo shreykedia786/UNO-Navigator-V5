@@ -5,6 +5,7 @@ import { PropertyInventoryTable } from '@/app/components/PropertyInventoryTable'
 import { OnboardingTour, ONBOARDING_STORAGE_KEYS } from '@/app/components/OnboardingTour';
 import { NavigatorAccessGate } from '@/app/components/NavigatorSubscriptionGate';
 import { NavigatorUpgradeRequestModal } from '@/app/components/NavigatorUpgradeRequestModal';
+import { NavigatorTrialEndedModal } from '@/app/components/NavigatorTrialEndedModal';
 import { StartFreeTrialModal } from '@/app/components/StartFreeTrialModal';
 import { Button } from '@/app/components/ui/button';
 import {
@@ -68,6 +69,7 @@ function NavigatorTrialBanner({ onUpgrade }: { onUpgrade: () => void }) {
 }
 
 const LIMITED_BANNER_DISMISS_KEY = 'uno.navigatorLimitedBanner.dismissed';
+const TRIAL_ENDED_MODAL_DISMISS_KEY = 'uno.navigatorTrialEndedModal.dismissed';
 
 /** In-product cross-sell for UNO users without Navigator (no separate marketing page). */
 function NavigatorLimitedBanner({
@@ -158,6 +160,7 @@ export default function App() {
   const [showOnboardingTour, setShowOnboardingTour] = useState(false);
   const [trialModalOpen, setTrialModalOpen] = useState(false);
   const [navigatorUpgradeModalOpen, setNavigatorUpgradeModalOpen] = useState(false);
+  const [trialEndedModalOpen, setTrialEndedModalOpen] = useState(false);
   const [trialRequestSubmitted, setTrialRequestSubmitted] = useState(() => hasNavigatorTrialRequestSubmitted());
   const [lockedNavigatorPreviewDismissed, setLockedNavigatorPreviewDismissed] = useState(
     () => isNavigatorLockedPreviewDismissed()
@@ -308,6 +311,29 @@ export default function App() {
     }
   }, [accessScreen, entitlement]);
 
+  useEffect(() => {
+    if (accessScreen !== 'main' || entitlement !== 'trial_expired') {
+      setTrialEndedModalOpen(false);
+      return;
+    }
+    let dismissed = false;
+    try {
+      dismissed = sessionStorage.getItem(TRIAL_ENDED_MODAL_DISMISS_KEY) === '1';
+    } catch {
+      dismissed = false;
+    }
+    setTrialEndedModalOpen(!dismissed);
+  }, [accessScreen, entitlement]);
+
+  const dismissTrialEndedModal = useCallback(() => {
+    try {
+      sessionStorage.setItem(TRIAL_ENDED_MODAL_DISMISS_KEY, '1');
+    } catch {
+      /* ignore */
+    }
+    setTrialEndedModalOpen(false);
+  }, []);
+
   const handleTourComplete = () => {
     setShowOnboardingTour(false);
   };
@@ -454,6 +480,18 @@ export default function App() {
       )}
 
       <StartFreeTrialModal open={trialModalOpen} onOpenChange={setTrialModalOpen} onSuccess={handleTrialRequestSubmitted} />
+      <NavigatorTrialEndedModal
+        open={trialEndedModalOpen}
+        onOpenChange={(next) => {
+          if (!next) dismissTrialEndedModal();
+          else setTrialEndedModalOpen(true);
+        }}
+        onSkip={dismissTrialEndedModal}
+        onUpgradeNow={() => {
+          dismissTrialEndedModal();
+          setNavigatorUpgradeModalOpen(true);
+        }}
+      />
       <NavigatorUpgradeRequestModal
         open={navigatorUpgradeModalOpen}
         onOpenChange={setNavigatorUpgradeModalOpen}
