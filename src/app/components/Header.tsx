@@ -5,6 +5,8 @@ import imgLogo from "figma:asset/036db285069a2b8b94cc4ad3c602ba0af3a2f1fe.png";
 type HeaderProps = {
   /** When set, clicking the UNO logo runs this (e.g. return to Navigator access gate). */
   onUnoLogoClick?: () => void;
+  /** Trial / full Navigator: let users replay the guided onboarding if they skipped or want a refresher. */
+  onReplayNavigatorOnboarding?: () => void;
   /** Main date range label in the filter row (e.g. subscribed demo vs default). */
   dateRangePrimaryLabel?: string;
   dateRangeHint?: string;
@@ -16,6 +18,7 @@ type HeaderProps = {
 
 export function Header({
   onUnoLogoClick,
+  onReplayNavigatorOnboarding,
   dateRangePrimaryLabel,
   dateRangeHint,
   showNavigatorRangeDemo = false,
@@ -37,7 +40,7 @@ export function Header({
         <div className="max-w-[1440px] mx-auto w-full flex items-center px-[50px] py-[10px]">
         <div className="flex items-center flex-1 min-w-0">
           {/* Menu Icon */}
-          <div className="flex items-center justify-center p-[10px] h-[48px] w-[44px]">
+          <div className="flex items-center justify-center p-[10px] h-[48px] w-[44px]" data-tour="uno-menu">
             <div className="size-[24px]">
               <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
                 <path d={svgPaths.p2e55b680} fill="#505050" />
@@ -73,6 +76,25 @@ export function Header({
 
         {/* Right Section */}
         <div className="flex items-center justify-end gap-[10px] flex-1 min-w-0">
+          {onReplayNavigatorOnboarding ? (
+            <>
+              <button
+                type="button"
+                onClick={onReplayNavigatorOnboarding}
+                className="shrink-0 rounded-md px-2 py-1 text-[12px] font-medium text-[#2753eb] underline decoration-[#2753eb]/35 underline-offset-2 transition-colors hover:bg-[#2753eb]/10 hover:decoration-[#2753eb] sm:text-[13px]"
+                title="Restart the Navigator onboarding tour from the beginning"
+              >
+                Replay tour
+              </button>
+              <div className="h-[19px] w-0 relative">
+                <div className="absolute inset-[0_-1px_0_0]">
+                  <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 1 19">
+                    <line stroke="#707070" strokeOpacity="0.4" x1="0.5" x2="0.5" y1="0" y2="19" />
+                  </svg>
+                </div>
+              </div>
+            </>
+          ) : null}
           {/* What's New */}
           <div className="relative h-[20px] w-[75px]">
             <div className="absolute inset-[0_4%_0_0] flex items-center justify-center">

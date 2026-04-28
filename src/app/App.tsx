@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { Header } from '@/app/components/Header';
 import { PropertyInventoryTable } from '@/app/components/PropertyInventoryTable';
 import { OnboardingTour, ONBOARDING_STORAGE_KEYS } from '@/app/components/OnboardingTour';
+import { NavigatorTrialOnboardingModal } from '@/app/components/NavigatorTrialOnboardingModal';
 import { NavigatorAccessGate } from '@/app/components/NavigatorSubscriptionGate';
 import { NavigatorUpgradeRequestModal } from '@/app/components/NavigatorUpgradeRequestModal';
 import { NavigatorTrialEndedModal } from '@/app/components/NavigatorTrialEndedModal';
@@ -158,6 +159,8 @@ export default function App() {
   const [accessScreen, setAccessScreen] = useState<AccessScreen>(initialAccessScreen);
   const [entitlement, setEntitlement] = useState<NavigatorEntitlement>(() => readNavigatorEntitlement());
   const [showOnboardingTour, setShowOnboardingTour] = useState(false);
+  const [onboardingInitialStep, setOnboardingInitialStep] = useState(0);
+  const [trialOnboardingModalOpen, setTrialOnboardingModalOpen] = useState(false);
   const [trialModalOpen, setTrialModalOpen] = useState(false);
   const [navigatorUpgradeModalOpen, setNavigatorUpgradeModalOpen] = useState(false);
   const [trialEndedModalOpen, setTrialEndedModalOpen] = useState(false);
@@ -206,6 +209,8 @@ export default function App() {
       /* ignore */
     }
     setShowOnboardingTour(false);
+    setTrialOnboardingModalOpen(false);
+    setOnboardingInitialStep(0);
     clearNavigatorLockedPreviewDismiss();
     setLockedNavigatorPreviewDismissed(false);
     setPreviewDismissGuidanceVisible(false);
@@ -216,13 +221,40 @@ export default function App() {
     }
     setLimitedBannerDismissed(false);
     try {
-      if (!localStorage.getItem(STORAGE_TRIAL_START)) {
-        startNavigatorTrial();
-      }
+      localStorage.removeItem(STORAGE_TRIAL_START);
     } catch {
       /* ignore */
     }
     setNavigatorFullSubscriber();
+    syncEntitlement();
+    setAccessScreen('main');
+  };
+
+  const enterMainAsTrialSubscriber = () => {
+    try {
+      localStorage.removeItem(ONBOARDING_STORAGE_KEYS.full);
+      localStorage.removeItem(ONBOARDING_STORAGE_KEYS.limited);
+    } catch {
+      /* ignore */
+    }
+    setShowOnboardingTour(false);
+    setTrialOnboardingModalOpen(false);
+    setOnboardingInitialStep(0);
+    clearNavigatorLockedPreviewDismiss();
+    setLockedNavigatorPreviewDismissed(false);
+    setPreviewDismissGuidanceVisible(false);
+    try {
+      sessionStorage.removeItem(LIMITED_BANNER_DISMISS_KEY);
+    } catch {
+      /* ignore */
+    }
+    setLimitedBannerDismissed(false);
+    try {
+      localStorage.removeItem(STORAGE_SUBSCRIBED);
+    } catch {
+      /* ignore */
+    }
+    startNavigatorTrial();
     syncEntitlement();
     setAccessScreen('main');
   };
@@ -262,6 +294,8 @@ export default function App() {
     setLockedNavigatorPreviewDismissed(false);
     setPreviewDismissGuidanceVisible(false);
     setShowOnboardingTour(false);
+    setTrialOnboardingModalOpen(false);
+    setOnboardingInitialStep(0);
     markNavigatorGateCompleted();
     syncEntitlement();
     setAccessScreen('main');
@@ -285,6 +319,8 @@ export default function App() {
     setLockedNavigatorPreviewDismissed(false);
     setPreviewDismissGuidanceVisible(false);
     setShowOnboardingTour(false);
+    setTrialOnboardingModalOpen(false);
+    setOnboardingInitialStep(0);
     applyNavigatorLimitedGateChoice();
     syncEntitlement();
     setAccessScreen('main');
@@ -304,11 +340,19 @@ export default function App() {
     }
 
     if (!tourCompleted) {
+      if (entitlement === 'trial') {
+        setShowOnboardingTour(false);
+        setOnboardingInitialStep(1);
+        setTrialOnboardingModalOpen(true);
+        return;
+      }
       const timer = setTimeout(() => {
+        setOnboardingInitialStep(0);
         setShowOnboardingTour(true);
       }, 1000);
       return () => clearTimeout(timer);
     }
+    setTrialOnboardingModalOpen(false);
   }, [accessScreen, entitlement]);
 
   useEffect(() => {
@@ -334,8 +378,27 @@ export default function App() {
     setTrialEndedModalOpen(false);
   }, []);
 
+  /** Trial or full subscriber: clear completion flag and restart intro modal or guided tour. */
+  const restartNavigatorOnboarding = useCallback(() => {
+    try {
+      localStorage.removeItem(ONBOARDING_STORAGE_KEYS.full);
+    } catch {
+      /* ignore */
+    }
+    setShowOnboardingTour(false);
+    setTrialOnboardingModalOpen(false);
+    if (entitlement === 'trial') {
+      setOnboardingInitialStep(1);
+      window.setTimeout(() => setTrialOnboardingModalOpen(true), 0);
+    } else if (entitlement === 'full') {
+      setOnboardingInitialStep(0);
+      window.setTimeout(() => setShowOnboardingTour(true), 100);
+    }
+  }, [entitlement]);
+
   const handleTourComplete = () => {
     setShowOnboardingTour(false);
+    setOnboardingInitialStep(0);
   };
 
   const handleTourStepChange = (stepIndex: number) => {
@@ -351,7 +414,8 @@ export default function App() {
     return (
       <NavigatorAccessGate
         onNotSubscribed={enterMainWithoutNavigator}
-        onAlreadySubscribed={enterMainAsFullSubscriber}
+        onTrialSubscribed={enterMainAsTrialSubscriber}
+        onFullVersion={enterMainAsFullSubscriber}
         onTrialExpiredContinue={enterMainAfterTrialExpired}
       />
     );
@@ -426,6 +490,8 @@ export default function App() {
           setTrialModalOpen(false);
           setNavigatorUpgradeModalOpen(false);
           setShowOnboardingTour(false);
+          setTrialOnboardingModalOpen(false);
+          setOnboardingInitialStep(0);
           clearNavigatorLockedPreviewDismiss();
           setLockedNavigatorPreviewDismissed(false);
           setPreviewDismissGuidanceVisible(false);
@@ -439,6 +505,11 @@ export default function App() {
           setEntitlement(readNavigatorEntitlement());
           setAccessScreen('gate');
         }}
+        onReplayNavigatorOnboarding={
+          intelligenceOn && (entitlement === 'trial' || entitlement === 'full')
+            ? restartNavigatorOnboarding
+            : undefined
+        }
         dateRangePrimaryLabel={
           intelligenceOn
             ? extendedUnoBeyondNavigator
@@ -473,6 +544,8 @@ export default function App() {
 
       {showOnboardingTour && (
         <OnboardingTour
+          initialStep={onboardingInitialStep}
+          includeNavigatorMenuStep={entitlement === 'full'}
           variant={entitlement === 'limited' || entitlement === 'trial_expired' ? 'limited' : 'full'}
           onComplete={handleTourComplete}
           onStepChange={handleTourStepChange}
@@ -480,6 +553,36 @@ export default function App() {
       )}
 
       <StartFreeTrialModal open={trialModalOpen} onOpenChange={setTrialModalOpen} onSuccess={handleTrialRequestSubmitted} />
+      <NavigatorTrialOnboardingModal
+        open={trialOnboardingModalOpen}
+        onOpenChange={(next) => {
+          if (!next) {
+            setTrialOnboardingModalOpen(false);
+            try {
+              localStorage.setItem(ONBOARDING_STORAGE_KEYS.full, 'true');
+            } catch {
+              /* ignore */
+            }
+            return;
+          }
+          setTrialOnboardingModalOpen(next);
+        }}
+        onStartTour={() => {
+          setTrialOnboardingModalOpen(false);
+          setOnboardingInitialStep(1);
+          setShowOnboardingTour(true);
+        }}
+        onSkipTour={() => {
+          setTrialOnboardingModalOpen(false);
+          try {
+            localStorage.setItem(ONBOARDING_STORAGE_KEYS.full, 'true');
+          } catch {
+            /* ignore */
+          }
+          setShowOnboardingTour(false);
+          setOnboardingInitialStep(0);
+        }}
+      />
       <NavigatorTrialEndedModal
         open={trialEndedModalOpen}
         onOpenChange={(next) => {

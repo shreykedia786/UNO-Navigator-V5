@@ -3,14 +3,16 @@ import { Button } from '@/app/components/ui/button';
 import imgUnoLogo from 'figma:asset/036db285069a2b8b94cc4ad3c602ba0af3a2f1fe.png';
 
 type NavigatorAccessGateProps = {
-  onAlreadySubscribed: () => void;
+  onTrialSubscribed: () => void;
+  onFullVersion: () => void;
   onNotSubscribed: () => void;
   /** After a 30-day preview ended: continue to Rates &amp; Inventory with upgrade-focused messaging. */
   onTrialExpiredContinue: () => void;
 };
 
 export function NavigatorAccessGate({
-  onAlreadySubscribed,
+  onTrialSubscribed,
+  onFullVersion,
   onNotSubscribed,
   onTrialExpiredContinue
 }: NavigatorAccessGateProps) {
@@ -67,10 +69,19 @@ export function NavigatorAccessGate({
               type="button"
               size="lg"
               className="inline-flex h-12 w-full items-center justify-center gap-2 border-0 bg-[#2753eb] text-[15px] font-semibold text-white shadow-md shadow-[#2753eb]/25 hover:bg-[#1e45c7]"
-              onClick={onAlreadySubscribed}
+              onClick={onTrialSubscribed}
             >
               <Sparkles className="size-4 opacity-90" aria-hidden />
-              Already Subscribed to Navigator
+              Subscribed for 30 Days Free Trial
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              className="inline-flex h-12 w-full items-center justify-center gap-2 border border-[#c7d2fe] bg-[#eef2ff]/85 text-[15px] font-medium text-[#1e3a8a] hover:bg-[#e0e7ff]"
+              onClick={onFullVersion}
+            >
+              Already on Full Version
             </Button>
           </div>
 

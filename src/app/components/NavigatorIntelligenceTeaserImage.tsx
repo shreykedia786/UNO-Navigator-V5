@@ -1,19 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BarChart3, Check, Scale } from 'lucide-react';
+import { BarChart3, Scale } from 'lucide-react';
 import { NavigatorUpgradeRequestModal } from '@/app/components/NavigatorUpgradeRequestModal';
 import { Button } from '@/app/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle
-} from '@/app/components/ui/dialog';
 import { cn } from '@/app/components/ui/utils';
 import { PARITY_PALETTE } from '@/app/lib/parityPalette';
-
-const DEMO_THANKS_AUTO_CLOSE_MS = 3600;
 
 const PREVIEW_SRC = `${import.meta.env.BASE_URL}navigator-competitor-intelligence-preview.png`;
 
@@ -710,7 +701,6 @@ export function NavigatorIntelligenceTeaserImage({
   navigatorUpsellContext = 'limited'
 }: NavigatorIntelligenceTeaserImageProps) {
   const [pinnedId, setPinnedId] = useState<string | null>(null);
-  const [demoThanksOpen, setDemoThanksOpen] = useState(false);
   const [upgradeRequestModalOpen, setUpgradeRequestModalOpen] = useState(false);
 
   useEffect(() => {
@@ -721,12 +711,6 @@ export function NavigatorIntelligenceTeaserImage({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [pinnedId]);
-
-  useEffect(() => {
-    if (!demoThanksOpen) return;
-    const t = window.setTimeout(() => setDemoThanksOpen(false), DEMO_THANKS_AUTO_CLOSE_MS);
-    return () => window.clearTimeout(t);
-  }, [demoThanksOpen]);
 
   return (
     <div
@@ -796,38 +780,24 @@ export function NavigatorIntelligenceTeaserImage({
               Upgrade to full version
             </button>
           ) : (
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                disabled={trialRequestSubmitted}
-                aria-label={
-                  trialRequestSubmitted
-                    ? 'Trial request already submitted; our team will enable access after review'
-                    : 'Start your 30-day free trial to unlock competitor insights'
-                }
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!trialRequestSubmitted) onRequestTrial();
-                }}
-                className="inline-flex h-9 min-h-9 flex-1 min-w-0 items-center justify-center bg-[#2753eb] px-2 py-1.5 text-center text-[10px] font-semibold leading-tight text-white shadow-md hover:bg-[#1e45c7] disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-white/90 disabled:shadow-none disabled:hover:bg-slate-600 sm:h-10 sm:text-[11px]"
-              >
-                <span className="min-w-0 px-0.5">
-                  {trialRequestSubmitted ? 'Request already sent' : 'Start 30 days free trial'}
-                </span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                aria-label="Request a demo"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDemoThanksOpen(true);
-                }}
-                className="inline-flex h-9 min-h-9 flex-1 min-w-0 items-center justify-center whitespace-nowrap border-white/35 bg-white/[0.06] px-2 py-1.5 text-center text-[11px] font-semibold leading-tight text-white shadow-none hover:bg-white/[0.12] hover:text-white sm:h-10 sm:text-[12px]"
-              >
-                Request demo
-              </Button>
-            </div>
+            <Button
+              type="button"
+              disabled={trialRequestSubmitted}
+              aria-label={
+                trialRequestSubmitted
+                  ? 'Trial request already submitted; our team will enable access after review'
+                  : 'Start your 30-day free trial to unlock competitor insights'
+              }
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!trialRequestSubmitted) onRequestTrial();
+              }}
+              className="inline-flex h-9 min-h-9 w-full min-w-0 items-center justify-center bg-[#2753eb] px-2 py-1.5 text-center text-[10px] font-semibold leading-tight text-white shadow-md hover:bg-[#1e45c7] disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-white/90 disabled:shadow-none disabled:hover:bg-slate-600 sm:h-10 sm:text-[11px]"
+            >
+              <span className="min-w-0 px-0.5">
+                {trialRequestSubmitted ? 'Request already sent' : 'Start 30 days free trial'}
+              </span>
+            </Button>
           )}
           <p className="text-center text-[11px] leading-snug text-white/90 sm:text-[12px]">
             {trialRequestSubmitted && navigatorUpsellContext !== 'trial_expired' ? (
@@ -870,43 +840,12 @@ export function NavigatorIntelligenceTeaserImage({
               <p className="mt-1 text-center text-[9px] leading-snug text-white/60 sm:text-[10px]">
                 {navigatorUpsellContext === 'trial_expired'
                   ? 'Upgrade anytime from the blue banner at the top, or use the button above.'
-                  : 'Subscribe or request a demo anytime from the blue banner at the top.'}
+                  : 'Start your free trial anytime from the blue banner at the top.'}
               </p>
             </div>
           ) : null}
             </div>
           </div>
-
-        <Dialog open={demoThanksOpen} onOpenChange={setDemoThanksOpen}>
-        <DialogContent
-          hideClose
-          onPointerDownOutside={() => setDemoThanksOpen(false)}
-          onEscapeKeyDown={() => setDemoThanksOpen(false)}
-          className="max-w-[min(400px,calc(100%-2rem))] gap-0 border border-emerald-100/80 bg-white p-0 shadow-2xl sm:max-w-md"
-          aria-describedby="demo-request-success-desc"
-        >
-          <div className="flex flex-col items-center px-6 pb-7 pt-8 text-center">
-            <div
-              className="flex size-16 shrink-0 items-center justify-center rounded-full bg-emerald-500 shadow-[0_0_0_10px_rgba(16,185,129,0.12)]"
-              aria-hidden
-            >
-              <Check className="size-9 text-white" strokeWidth={3} />
-            </div>
-            <DialogHeader className="mt-6 space-y-2 sm:text-center">
-              <DialogTitle className="text-lg font-semibold tracking-tight text-slate-900">
-                Request received
-              </DialogTitle>
-              <DialogDescription
-                id="demo-request-success-desc"
-                className="text-[15px] leading-relaxed text-slate-600"
-              >
-                We have successfully taken your request for demo.
-              </DialogDescription>
-            </DialogHeader>
-            <p className="mt-4 text-xs text-slate-400">This window will close in a few seconds.</p>
-          </div>
-        </DialogContent>
-        </Dialog>
 
         <NavigatorUpgradeRequestModal open={upgradeRequestModalOpen} onOpenChange={setUpgradeRequestModalOpen} />
 

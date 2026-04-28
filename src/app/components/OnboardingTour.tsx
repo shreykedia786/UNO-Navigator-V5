@@ -63,6 +63,16 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   }
 ];
 
+const NAVIGATOR_MENU_STEP: OnboardingStep = {
+  id: 'navigator-menu',
+  title: 'Access Navigator from the UNO menu to explore full insights',
+  description:
+    'Open the UNO menu and search for Navigator to access deeper pricing insights anytime.',
+  targetSelector: '[data-tour="uno-menu"]',
+  position: 'right',
+  highlightPadding: 10
+};
+
 /** Not subscribed / limited demo: value-led welcome + expand row (preview mode; trial via top banner). */
 const LIMITED_ONBOARDING_STEPS: OnboardingStep[] = [
   {
@@ -96,11 +106,19 @@ interface OnboardingTourProps {
   onComplete: () => void;
   onStepChange?: (stepIndex: number) => void;
   variant?: OnboardingTourVariant;
+  initialStep?: number;
+  includeNavigatorMenuStep?: boolean;
 }
 
 const chartStyleTooltipIds = new Set(['competitor-graph', 'parity-colors', 'drawer-preview']);
 
-export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: OnboardingTourProps) {
+export function OnboardingTour({
+  onComplete,
+  onStepChange,
+  variant = 'full',
+  initialStep = 0,
+  includeNavigatorMenuStep = false
+}: OnboardingTourProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [targetElement, setTargetElement] = useState<HTMLElement | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
@@ -110,21 +128,22 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
   const [highlightRect, setHighlightRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const [isVisible, setIsVisible] = useState(false);
 
-  const steps = useMemo(
-    () => (variant === 'limited' ? LIMITED_ONBOARDING_STEPS : ONBOARDING_STEPS),
-    [variant]
-  );
+  const steps = useMemo(() => {
+    if (variant === 'limited') return LIMITED_ONBOARDING_STEPS;
+    return includeNavigatorMenuStep ? [...ONBOARDING_STEPS, NAVIGATOR_MENU_STEP] : ONBOARDING_STEPS;
+  }, [variant, includeNavigatorMenuStep]);
 
   useEffect(() => {
-    setCurrentStep(0);
+    setCurrentStep(Math.max(0, initialStep));
     setIsVisible(false);
-  }, [variant]);
+  }, [variant, initialStep]);
 
   const step = steps[currentStep];
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === steps.length - 1;
   const isCenterModal = !step.targetSelector; // Check if this should be a centered modal
   const isWelcomeStep = step.id === 'welcome' || step.id === 'welcome-limited';
+  const isNavigatorMenuStep = step.id === 'navigator-menu';
 
   const getTooltipWidth = (s: OnboardingStep) => {
     if (s.id === 'competitor-graph' || s.id === 'parity-colors' || s.id === 'drawer-preview') return 332;
@@ -138,6 +157,7 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
     if (step.id === 'competitor-graph') return 300;
     if (step.id === 'parity-colors') return 340;
     if (step.id === 'drawer-preview') return 335;
+    if (step.id === 'navigator-menu') return 330;
     return 260;
   };
 
@@ -389,7 +409,21 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
         }
       >
         {/* Header — same blue bar as all other onboarding steps */}
-        <div className="relative bg-gradient-to-r from-[#2753eb] to-[#4f46e5] text-white px-6 py-4 rounded-t-xl">
+        <div className="relative overflow-visible bg-gradient-to-r from-[#2753eb] to-[#4f46e5] px-6 py-4 text-white rounded-t-xl">
+          {/* Last step (full Navigator): blue pointer in header toward UNO menu — replaces white body arrow */}
+          {isNavigatorMenuStep && !isCenterModal && step.position === 'right' ? (
+            tooltipArrowOnLeft ? (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute left-0 top-[20px] z-[2] h-3.5 w-3.5 -translate-x-1/2 rotate-45 border border-[#1e40af]/35 bg-[#2753eb]"
+              />
+            ) : (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute right-0 top-1/2 z-[2] h-3.5 w-3.5 translate-x-1/2 -translate-y-1/2 rotate-45 border border-[#1e40af]/35 bg-[#2753eb] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
+              />
+            )
+          ) : null}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -398,7 +432,9 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
               <div>
                 <h3 className="text-[15px] font-bold leading-tight mb-1">{step.title}</h3>
                 <p className="text-[11px] text-white/80">
-                  {variant === 'limited' ? `Step ${currentStep + 1} of 2` : `Step ${currentStep + 1} of ${steps.length}`}
+                  {variant === 'limited'
+                    ? `Step ${currentStep + 1} of 2`
+                    : `Step ${currentStep + 1} of ${steps.length}`}
                 </p>
               </div>
             </div>
@@ -666,6 +702,20 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
             </div>
           )}
 
+          {step.id === 'navigator-menu' && (
+            <div className="mt-3">
+              <div className="rounded-xl border border-slate-200/90 bg-white p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                <p className="text-[13px] font-semibold leading-snug text-slate-900">With Navigator, you can:</p>
+                <ul className="mt-2.5 list-disc space-y-1.5 pl-4 text-[13px] leading-relaxed text-slate-700">
+                  <li>Track rate trends</li>
+                  <li>View demand forecasts</li>
+                  <li>Monitor OTA rankings</li>
+                  <li>And more—all within UNO</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* Progress indicators */}
           <div
             className={`flex items-center gap-1.5 mb-4 ${step.id === 'drawer-preview' ? 'mt-4' : 'mt-5'}`}
@@ -682,34 +732,65 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between gap-3">
-            <button
-              onClick={handleSkip}
-              className="text-[13px] text-gray-500 hover:text-gray-700 font-medium transition-colors"
-            >
-              Skip Tour
-            </button>
-
-            <div className="flex items-center gap-2">
-              {!isFirstStep && (
-                <button
-                  onClick={handlePrevious}
-                  className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  Previous
-                </button>
-              )}
-              
+          {isNavigatorMenuStep ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button
-                onClick={handleNext}
-                className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-white bg-[#2753eb] hover:bg-[#1e3db8] rounded-lg transition-colors"
+                type="button"
+                onClick={handleSkip}
+                className="order-3 self-start text-[13px] font-medium text-gray-500 transition-colors hover:text-gray-700 sm:order-1"
               >
-                {isLastStep ? 'Finish' : 'Next'}
-                {!isLastStep && <ArrowRight className="w-3.5 h-3.5" />}
+                Skip tour
               </button>
+              <div className="order-1 flex flex-wrap items-center justify-end gap-2 sm:order-2">
+                <button
+                  type="button"
+                  onClick={handlePrevious}
+                  className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-gray-700 transition-colors hover:bg-gray-100 rounded-lg"
+                >
+                  ← Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-white bg-[#2753eb] hover:bg-[#1e3db8] rounded-lg transition-colors"
+                >
+                  Finish
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="text-[13px] text-gray-500 hover:text-gray-700 font-medium transition-colors"
+              >
+                Skip Tour
+              </button>
+
+              <div className="flex items-center gap-2">
+                {!isFirstStep && (
+                  <button
+                    type="button"
+                    onClick={handlePrevious}
+                    className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Previous
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-white bg-[#2753eb] hover:bg-[#1e3db8] rounded-lg transition-colors"
+                >
+                  {isLastStep ? 'Finish' : 'Next'}
+                  {!isLastStep && <ArrowRight className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Arrow pointer — vertical position targets highlight center (chevron on step 2) */}
@@ -731,7 +812,7 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
             }}
           />
         )}
-        {!isCenterModal && step.position === 'right' && tooltipArrowOnLeft && (
+        {!isCenterModal && step.position === 'right' && tooltipArrowOnLeft && !isNavigatorMenuStep && (
           <div
             className="absolute -left-2 h-4 w-4 bg-white"
             style={{
@@ -740,7 +821,7 @@ export function OnboardingTour({ onComplete, onStepChange, variant = 'full' }: O
             }}
           />
         )}
-        {!isCenterModal && step.position === 'right' && !tooltipArrowOnLeft && (
+        {!isCenterModal && step.position === 'right' && !tooltipArrowOnLeft && !isNavigatorMenuStep && (
           <div
             className="absolute -right-2 h-4 w-4 bg-white"
             style={{
