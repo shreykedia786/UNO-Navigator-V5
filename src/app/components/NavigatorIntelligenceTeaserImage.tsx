@@ -767,11 +767,42 @@ export function NavigatorIntelligenceTeaserImage({
                 'bg-slate-900/78 px-3 py-3 shadow-[0_8px_28px_rgba(0,0,0,0.38)] backdrop-blur-md sm:px-3.5 sm:py-3'
               )}
             >
+          <div className="text-center text-[11px] leading-snug text-white/90 sm:text-[12px]">
+            {trialRequestSubmitted && navigatorUpsellContext !== 'trial_expired' ? (
+              <p>
+                We&apos;ve received your trial request. Navigator access is turned on by our team after review, so it
+                won&apos;t appear immediately. The snapshot below stays illustrative. Questions?{' '}
+                <a
+                  href={`mailto:${SUPPORT_EMAIL}`}
+                  className="font-semibold text-white underline decoration-white/45 underline-offset-2 transition-colors hover:decoration-white"
+                >
+                  {SUPPORT_EMAIL}
+                </a>
+              </p>
+            ) : navigatorUpsellContext === 'trial_expired' ? (
+              <p>
+                Continue comparing rates and tracking parity. Upgrade to restore real-time insights. Need help?{' '}
+                <a
+                  href={`mailto:${SUPPORT_EMAIL}`}
+                  className="font-semibold text-white underline decoration-white/45 underline-offset-2 transition-colors hover:decoration-white"
+                >
+                  {SUPPORT_EMAIL}
+                </a>
+              </p>
+            ) : (
+              <>
+                <p className="text-[14px] font-semibold text-white">Unlock your pricing insights</p>
+                <p className="mt-1 text-[11px] leading-snug text-white/85 sm:text-[12px]">
+                  See your actual pricing gaps across dates and competitors
+                </p>
+              </>
+            )}
+          </div>
           {navigatorUpsellContext === 'trial_expired' ? (
             <button
               type="button"
               aria-label="Request upgrade to full Navigator version"
-              className="inline-flex h-9 min-h-9 w-full min-w-0 cursor-pointer items-center justify-center rounded-md border-0 bg-[#2753eb] px-2 py-1.5 text-center text-[11px] font-semibold leading-tight text-white shadow-md transition-colors hover:bg-[#1e45c7] sm:h-10 sm:text-[12px]"
+              className="inline-flex h-9 min-h-9 w-full min-w-0 cursor-pointer items-center justify-center rounded-md border-0 bg-[#2753eb] px-2 py-1.5 text-center text-[12px] font-semibold leading-tight text-white shadow-md transition-colors hover:bg-[#1e45c7] sm:h-10 sm:text-[13px]"
               onClick={(e) => {
                 e.stopPropagation();
                 setUpgradeRequestModalOpen(true);
@@ -792,39 +823,13 @@ export function NavigatorIntelligenceTeaserImage({
                 e.stopPropagation();
                 if (!trialRequestSubmitted) onRequestTrial();
               }}
-              className="inline-flex h-9 min-h-9 w-full min-w-0 items-center justify-center bg-[#2753eb] px-2 py-1.5 text-center text-[10px] font-semibold leading-tight text-white shadow-md hover:bg-[#1e45c7] disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-white/90 disabled:shadow-none disabled:hover:bg-slate-600 sm:h-10 sm:text-[11px]"
+              className="inline-flex h-9 min-h-9 w-full min-w-0 items-center justify-center bg-[#2753eb] px-2 py-1.5 text-center text-[12px] font-semibold leading-tight text-white shadow-md hover:bg-[#1e45c7] disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-white/90 disabled:shadow-none disabled:hover:bg-slate-600 sm:h-10 sm:text-[13px]"
             >
               <span className="min-w-0 px-0.5">
-                {trialRequestSubmitted ? 'Request already sent' : 'Start 30 days free trial'}
+                {trialRequestSubmitted ? 'Request already sent' : '👉 Start 30-day free trial'}
               </span>
             </Button>
           )}
-          <p className="text-center text-[11px] leading-snug text-white/90 sm:text-[12px]">
-            {trialRequestSubmitted && navigatorUpsellContext !== 'trial_expired' ? (
-              <>
-                We&apos;ve received your trial request. Navigator access is turned on by our team after review, so it
-                won&apos;t appear immediately. The snapshot below stays illustrative. Questions?{' '}
-                <a
-                  href={`mailto:${SUPPORT_EMAIL}`}
-                  className="font-semibold text-white underline decoration-white/45 underline-offset-2 transition-colors hover:decoration-white"
-                >
-                  {SUPPORT_EMAIL}
-                </a>
-              </>
-            ) : navigatorUpsellContext === 'trial_expired' ? (
-              <>
-                Continue comparing rates and tracking parity. Upgrade to restore real-time insights. Need help?{' '}
-                <a
-                  href={`mailto:${SUPPORT_EMAIL}`}
-                  className="font-semibold text-white underline decoration-white/45 underline-offset-2 transition-colors hover:decoration-white"
-                >
-                  {SUPPORT_EMAIL}
-                </a>
-              </>
-            ) : (
-              <>Snapshot of competitor pricing &amp; parity — your live UNO rates stay as they are.</>
-            )}
-          </p>
           {onDismissPreview ? (
             <div className="pointer-events-auto border-t border-white/15 pt-2">
               <button
@@ -835,12 +840,12 @@ export function NavigatorIntelligenceTeaserImage({
                   onDismissPreview();
                 }}
               >
-                Hide preview
+                Maybe later
               </button>
               <p className="mt-1 text-center text-[9px] leading-snug text-white/60 sm:text-[10px]">
                 {navigatorUpsellContext === 'trial_expired'
                   ? 'Upgrade anytime from the blue banner at the top, or use the button above.'
-                  : 'Start your free trial anytime from the blue banner at the top.'}
+                  : 'You can access this preview anytime from the top blue banner.'}
               </p>
             </div>
           ) : null}

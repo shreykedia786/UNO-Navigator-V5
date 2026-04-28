@@ -78,18 +78,18 @@ const NAVIGATOR_MENU_STEP: OnboardingStep = {
 const LIMITED_ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'welcome-limited',
-    title: 'Stay competitive with pricing insights',
+    title: 'Know when your pricing is losing bookings',
     description:
-      'Preview how your rates compare with competitors and where you stand on parity across dates.',
+      'Identify where your rates are higher, lower, or perfectly matched with competitors across dates and room types.',
     targetSelector: '',
     position: 'bottom',
     highlightPadding: 0
   },
   {
     id: 'expand-room-limited',
-    title: 'Explore pricing insights',
+    title: 'Explore how your pricing compares',
     description:
-      'Tap a row to compare your rates with competitors and view your parity for each date.',
+      'Expand a room type, then hover on the blue hotspots.',
     targetSelector: '[data-tour="room-chevron-icon"]',
     position: 'right',
     highlightPadding: 6
@@ -471,8 +471,13 @@ export function OnboardingTour({
                 </p>
               ) : null}
               {step.id === 'expand-room-limited' ? (
-                <p className="mt-4 text-center text-[11px] leading-snug text-slate-500">
-                  Unlock full insights from the top banner when you&apos;re ready.
+                <p className="mt-3 text-[13px] leading-relaxed text-gray-700">
+                  See how your pricing compares with competitors.
+                </p>
+              ) : null}
+              {step.id === 'expand-room-limited' ? (
+                <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-snug text-amber-800">
+                  Pricing gaps like these can directly impact your bookings and revenue.
                 </p>
               ) : null}
             </>
@@ -492,10 +497,10 @@ export function OnboardingTour({
                         </div>
                         <div className="min-w-0">
                           <h4 className="text-[13px] font-bold leading-snug text-slate-900">
-                            Compare your rates with competitors
+                            Spot missed opportunities
                           </h4>
                           <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-                            Identify pricing differences across dates and respond faster.
+                            Find dates where competitor pricing is more attractive and adjust before you lose bookings.
                           </p>
                         </div>
                       </div>
@@ -507,10 +512,10 @@ export function OnboardingTour({
                         </div>
                         <div className="min-w-0">
                           <h4 className="text-[13px] font-bold leading-snug text-slate-900">
-                            Track rate parity across OTAs
+                            Stay competitive across channels
                           </h4>
                           <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-                            See where you&apos;re winning, matching, or losing at a glance.
+                            Track where you&apos;re winning, matching, or losing on price at a glance.
                           </p>
                         </div>
                       </div>
@@ -553,7 +558,7 @@ export function OnboardingTour({
               </div>
               {step.id === 'welcome-limited' ? (
                 <p className="text-center text-[11px] leading-snug text-slate-500">
-                  Start your free trial from the top banner to unlock full access.
+                  This is a preview. Unlock insights for your property with a free trial.
                 </p>
               ) : (
                 <p className="text-center text-[10px] leading-snug text-slate-400">
@@ -771,7 +776,7 @@ export function OnboardingTour({
                 onClick={handleSkip}
                 className="text-[13px] text-gray-500 hover:text-gray-700 font-medium transition-colors"
               >
-                Skip Tour
+                {step.id === 'welcome-limited' ? 'Skip' : 'Skip Tour'}
               </button>
 
               <div className="flex items-center gap-2">
@@ -791,8 +796,16 @@ export function OnboardingTour({
                   onClick={handleNext}
                   className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-white bg-[#2753eb] hover:bg-[#1e3db8] rounded-lg transition-colors"
                 >
-                  {isLastStep ? 'Finish' : 'Next'}
-                  {!isLastStep && <ArrowRight className="w-3.5 h-3.5" />}
+                  {step.id === 'welcome-limited'
+                    ? '👉 Explore insights'
+                    : step.id === 'expand-room-limited'
+                      ? '👉 Got it'
+                      : isLastStep
+                        ? 'Finish'
+                        : 'Next'}
+                  {!isLastStep && step.id !== 'welcome-limited' && step.id !== 'expand-room-limited' && (
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  )}
                 </button>
               </div>
             </div>
