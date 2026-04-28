@@ -780,15 +780,13 @@ export function NavigatorIntelligenceTeaserImage({
                 </a>
               </p>
             ) : navigatorUpsellContext === 'trial_expired' ? (
-              <p>
-                Continue comparing rates and tracking parity. Upgrade to restore real-time insights. Need help?{' '}
-                <a
-                  href={`mailto:${SUPPORT_EMAIL}`}
-                  className="font-semibold text-white underline decoration-white/45 underline-offset-2 transition-colors hover:decoration-white"
-                >
-                  {SUPPORT_EMAIL}
-                </a>
-              </p>
+              <>
+                <p className="text-[14px] font-semibold text-white">Your trial has ended</p>
+                <p className="mt-1 text-[11px] leading-snug text-white/85 sm:text-[12px]">
+                  You&apos;re no longer seeing real-time competitor pricing insights. Upgrade to continue tracking your
+                  pricing and stay competitive.
+                </p>
+              </>
             ) : (
               <>
                 <p className="text-[14px] font-semibold text-white">Unlock your pricing insights</p>
@@ -808,7 +806,7 @@ export function NavigatorIntelligenceTeaserImage({
                 setUpgradeRequestModalOpen(true);
               }}
             >
-              Upgrade to full version
+              👉 Upgrade to continue
             </button>
           ) : (
             <Button
@@ -844,7 +842,7 @@ export function NavigatorIntelligenceTeaserImage({
               </button>
               <p className="mt-1 text-center text-[9px] leading-snug text-white/60 sm:text-[10px]">
                 {navigatorUpsellContext === 'trial_expired'
-                  ? 'Upgrade anytime from the blue banner at the top, or use the button above.'
+                  ? 'Upgrade anytime from the top banner'
                   : 'You can access this preview anytime from the top blue banner.'}
               </p>
             </div>

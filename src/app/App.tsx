@@ -48,7 +48,7 @@ function NavigatorTrialBanner({ onUpgrade }: { onUpgrade: () => void }) {
       <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-center gap-2 text-center sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3 sm:gap-y-2 sm:text-left">
         <p className="max-w-[920px] font-normal leading-snug text-white/95 sm:leading-tight">
           You have <strong className="font-semibold text-white">{left}</strong> day{left === 1 ? '' : 's'} left in your
-          trial. Compare your rates with competitors and track parity before it ends.
+          Navigator trial. Compare your rates with competitors and track parity before it ends.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2 sm:shrink-0">
           <span className="hidden select-none text-white/80 sm:inline" aria-hidden>
