@@ -39,8 +39,9 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: 'competitor-graph',
-    title: 'Competitor spread at room level',
-    description: 'Each column uses competitors’ cheapest rate plan for that room; your blue line is your cheapest rate that day. Hover for rate plan and channel.',
+    title: 'Understand competitor pricing',
+    description:
+      'Compare your lowest rate with competitors’ lowest rates across dates.',
     targetSelector: '[data-tour="rate-chart"]',
     position: 'right',
     highlightPadding: 8
@@ -464,6 +465,11 @@ export function OnboardingTour({
               >
                 {step.description}
               </p>
+              {step.id === 'competitor-graph' ? (
+                <p className="mt-3 text-[13px] leading-relaxed text-gray-700">
+                  The blue line shows your rate, and the range shows competitor prices.
+                </p>
+              ) : null}
               {step.id === 'expand-room-limited' ? (
                 <p className="mt-4 text-center text-[11px] leading-snug text-slate-500">
                   Unlock full insights from the top banner when you&apos;re ready.
@@ -638,9 +644,9 @@ export function OnboardingTour({
             </div>
           )}
 
-          {/* Competitor chart: horizontal grid + SVGs matching RateCandlestickChart */}
+          {/* Competitor chart legend — Max / Yours / Min, matches RateCandlestickChart */}
           {step.id === 'competitor-graph' && (
-            <div className="mt-3">
+            <div className="mt-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#2753eb] mb-2">
                 Competitor range
               </p>
