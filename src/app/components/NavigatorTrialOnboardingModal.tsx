@@ -1,4 +1,4 @@
-import { CheckCircle2, Sparkles } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
 
@@ -27,8 +27,16 @@ export function NavigatorTrialOnboardingModal({
           <div className="pointer-events-none absolute -left-6 bottom-0 h-16 w-16 rounded-full bg-[#6ea8ff]/30 blur-xl" aria-hidden />
           <DialogHeader className="relative z-10 space-y-2 text-left">
             <DialogTitle className="flex items-center gap-2.5 text-[22px] font-semibold tracking-tight text-white">
-              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
-                <Sparkles className="size-4.5 text-white" aria-hidden />
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/15 ring-1 ring-white/25">
+                <img
+                  src={`${import.meta.env.BASE_URL}navigator-pin-mark.png`}
+                  srcSet={`${import.meta.env.BASE_URL}navigator-pin-mark.png 1x, ${import.meta.env.BASE_URL}navigator-pin-mark@2x.png 2x`}
+                  width={36}
+                  height={36}
+                  alt="Navigator"
+                  className="h-full w-full rounded-xl object-contain object-center p-0.5"
+                  decoding="async"
+                />
               </span>
               Your 30-day trial is active
             </DialogTitle>

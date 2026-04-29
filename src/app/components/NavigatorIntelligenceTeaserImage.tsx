@@ -4,7 +4,7 @@ import { BarChart3, Scale } from 'lucide-react';
 import { NavigatorUpgradeRequestModal } from '@/app/components/NavigatorUpgradeRequestModal';
 import { Button } from '@/app/components/ui/button';
 import { cn } from '@/app/components/ui/utils';
-import { PARITY_COLUMN_TINT, PARITY_PALETTE } from '@/app/lib/parityPalette';
+import { PARITY_PALETTE } from '@/app/lib/parityPalette';
 
 const PREVIEW_SRC = `${import.meta.env.BASE_URL}navigator-competitor-intelligence-preview.png`;
 
@@ -174,101 +174,87 @@ const HOTSPOTS: HotspotConfig[] = [
   }
 ];
 
+/** Parity hotspot tooltip — Meet / Win / Loss cards (matches parity onboarding reference). */
+const PARITY_TOOLTIP_LEGEND = {
+  meet: { bar: '#F9C13E', bg: '#FFF9E6', border: '#FDE68A' },
+  win: { bar: '#66C16F', bg: '#EDF9F1', border: '#C6F1D6' },
+  loss: { bar: '#DC352E', bg: '#FEECEB', border: '#FBCFD0' }
+} as const;
+
+type ParityTooltipLegendSpec = (typeof PARITY_TOOLTIP_LEGEND)[keyof typeof PARITY_TOOLTIP_LEGEND];
+
+function ParityLegendTooltipCard({
+  title,
+  subtitle,
+  spec
+}: {
+  title: string;
+  subtitle: string;
+  spec: ParityTooltipLegendSpec;
+}) {
+  return (
+    <div
+      className="flex flex-col overflow-hidden rounded-md border px-1.5 pb-1.5 pt-1.5 text-center shadow-sm"
+      style={{ borderColor: spec.border, backgroundColor: spec.bg }}
+    >
+      <div
+        className="mx-auto mb-1.5 h-2 w-full max-w-[3.25rem] shrink-0 rounded-full"
+        style={{ backgroundColor: spec.bar }}
+      />
+      <p className="text-[11px] font-bold leading-tight text-[#1a1a1a]">{title}</p>
+      <p className="mt-0.5 text-[10px] leading-snug text-[#666666]">{subtitle}</p>
+    </div>
+  );
+}
+
 function ParityTintExplainer({ withTopMargin = true }: { withTopMargin?: boolean }) {
-  const meet = PARITY_COLUMN_TINT.meet;
-  const win = PARITY_COLUMN_TINT.win;
-  const loss = PARITY_COLUMN_TINT.loss;
+  const sample = PARITY_TOOLTIP_LEGEND.win;
 
   return (
     <div
-      className={cn('space-y-2', withTopMargin && 'mt-2')}
+      className={cn('space-y-1.5', withTopMargin && 'mt-2')}
       aria-label="Parity analysis: your direct rate vs OTA, background colors"
     >
-      <div className="rounded-lg border border-slate-200/90 bg-white p-2.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-        <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+      <div className="rounded-lg border border-slate-200/90 bg-white p-2 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+        <p className="mb-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
           Parity grid
         </p>
-        <div className="grid grid-cols-3 gap-2">
-          <div
-            className="rounded-lg border px-2 py-2.5 text-center"
-            style={{ borderColor: `${meet.text}40`, backgroundColor: meet.bg }}
-          >
-            <div
-              className="mx-auto h-1.5 w-full max-w-[52px] rounded-full"
-              style={{ backgroundColor: meet.text }}
-            />
-            <p className="mt-2 text-[12px] font-bold text-gray-900">Meet</p>
-            <p className="mt-1 text-[11px] leading-snug text-slate-600">Rates match</p>
-          </div>
-          <div
-            className="rounded-lg border px-2 py-2.5 text-center"
-            style={{ borderColor: `${win.text}40`, backgroundColor: win.bg }}
-          >
-            <div
-              className="mx-auto h-1.5 w-full max-w-[52px] rounded-full"
-              style={{ backgroundColor: win.text }}
-            />
-            <p className="mt-2 text-[12px] font-bold text-gray-900">Win</p>
-            <p className="mt-1 text-[11px] leading-snug text-slate-600">OTA higher</p>
-          </div>
-          <div
-            className="rounded-lg border px-2 py-2.5 text-center"
-            style={{ borderColor: `${loss.text}40`, backgroundColor: loss.bg }}
-          >
-            <div
-              className="mx-auto h-1.5 w-full max-w-[52px] rounded-full"
-              style={{ backgroundColor: loss.text }}
-            />
-            <p className="mt-2 text-[12px] font-bold text-gray-900">Loss</p>
-            <p className="mt-1 text-[11px] leading-snug text-slate-600">OTA lower</p>
-          </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          <ParityLegendTooltipCard title="Meet" subtitle="Rates match" spec={PARITY_TOOLTIP_LEGEND.meet} />
+          <ParityLegendTooltipCard title="Win" subtitle="OTA higher" spec={PARITY_TOOLTIP_LEGEND.win} />
+          <ParityLegendTooltipCard title="Loss" subtitle="OTA lower" spec={PARITY_TOOLTIP_LEGEND.loss} />
         </div>
-        <p className="mt-2.5 border-t border-slate-100 pt-2.5 text-center text-[11px] leading-snug text-slate-600">
-          These colors appear behind each date in the grid.
+        <p className="mt-1.5 border-t border-slate-200/90 pt-1.5 text-center text-[10px] leading-snug text-slate-600">
+          Cell backgrounds mirror these states so you can scan parity issues in seconds.
         </p>
       </div>
 
-      <div
-        className="overflow-hidden rounded-lg border border-slate-200/80 bg-white"
-        style={{ boxShadow: `inset 0 0 0 1px ${meet.text}33` }}
-      >
-        <p
-          className="border-b border-slate-200/60 px-2.5 py-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-slate-600"
-          style={{ backgroundColor: meet.bg }}
-        >
-          Sample data · illustrative
-        </p>
+      <div className="flex gap-2.5 rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         <div
-          className="flex items-center justify-between gap-2 px-2.5 py-2.5"
-          style={{ backgroundColor: meet.bg }}
-        >
-          <div className="min-w-0">
-            <p className="text-[11px] text-slate-600">Example outcome</p>
+          className="w-1 shrink-0 self-stretch rounded-full"
+          style={{ backgroundColor: sample.bar }}
+          aria-hidden
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-medium text-slate-500">Illustrative example</p>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span
-              className="mt-1 inline-block rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white"
-              style={{ backgroundColor: meet.text }}
+              className="rounded-md px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white"
+              style={{ backgroundColor: sample.bar }}
             >
-              Meet
+              Win
+            </span>
+            <span className="text-[11px] font-semibold tabular-nums text-slate-900">
+              Parity <span className="text-slate-400">·</span> 76%
             </span>
           </div>
-          <div className="min-w-0 text-right">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-600">Parity score</p>
-            <p className="text-[22px] font-bold tabular-nums leading-none text-slate-900">88%</p>
-            <p className="mt-0.5 text-[11px] text-slate-500">for demo only</p>
-          </div>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
+            <span className="font-medium text-slate-800">Win</span> means at least one OTA shows a{' '}
+            <span className="font-medium text-slate-800">higher</span> rate than yours that day — your price is more
+            competitive on that date.
+          </p>
         </div>
       </div>
-
-      <p className="text-[12px] leading-relaxed text-slate-600">
-        <span className="font-semibold" style={{ color: meet.text }}>
-          Meet
-        </span>{' '}
-        uses the amber column tint when you&apos;re mostly matched.{' '}
-        <span className="font-semibold" style={{ color: win.text }}>
-          Win
-        </span>{' '}
-        is green; <span className="font-semibold" style={{ color: loss.text }}>Loss</span> is red.
-      </p>
     </div>
   );
 }
@@ -364,7 +350,9 @@ function HotspotTooltipBody({ h }: { h: HotspotConfig }) {
       ) : null}
       {h.id !== 'details' ? (
         <p className="mt-2.5 border-t border-slate-200/80 pt-2 text-[12px] font-medium leading-snug text-slate-700">
-          <span className="text-emerald-700">Why it matters · </span>
+          <span className={h.id === 'parity' ? 'font-semibold text-slate-600' : 'text-emerald-700'}>
+            Why it matters ·{' '}
+          </span>
           {h.benefit}
         </p>
       ) : null}
@@ -379,7 +367,7 @@ function hotspotAriaLabel(h: HotspotConfig): string {
     return `${prefix}Your ${g.yourRatePlan} ${formatUsd(g.yourCheapest)}. Competitor low ${formatUsd(g.competitorMin)}, high ${formatUsd(g.competitorMax)}. ${h.benefit}`;
   }
   if (h.id === 'parity') {
-    return `${prefix}${h.summary ?? ''} Parity grid: Meet rates match, Win OTA higher than your rate, Loss OTA lower. Amber column tint is Meet; green is Win; red is Loss. Illustrative sample: Meet with parity score 88 percent. ${h.benefit}`;
+    return `${prefix}${h.summary ?? ''} Parity grid: Meet Win Loss cards. Sample Win: parity score 76 percent. Win means at least one OTA is priced higher than your rate that day. ${h.benefit}`;
   }
   if (h.id === 'details') {
     return `${prefix}${h.summary ?? ''} Competitor pricing and parity insights preview. ${h.benefit}`;
