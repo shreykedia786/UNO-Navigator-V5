@@ -12,6 +12,16 @@ export const PARITY_PALETTE = {
   loss: PARITY_LOSS_HEX
 } as const;
 
+/**
+ * Your Rates column backgrounds when a date’s dominant outcome is Win / Meet / Loss.
+ * Matches `DetailedCompetitorModal` `getYourRateParityColumnTint` (amber = Meet, not PARITY_MEET_HEX).
+ */
+export const PARITY_COLUMN_TINT = {
+  win: { bg: '#ecfdf5', text: '#14532d' },
+  meet: { bg: '#fffbeb', text: '#78350f' },
+  loss: { bg: '#fee2e2', text: '#991b1b' }
+} as const;
+
 /** Stacked bar: Meet | Win | Loss (left → right). % labels: dark on meet/win, white on loss. */
 export const PARITY_SEGMENT_PERCENT_CLASS = {
   meet: 'text-[10px] font-semibold tabular-nums text-[#1a1a1a]',

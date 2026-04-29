@@ -21,7 +21,7 @@ import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { cn } from './ui/utils';
-import { PARITY_PALETTE, PARITY_SEGMENT_PERCENT_CLASS } from '@/app/lib/parityPalette';
+import { PARITY_COLUMN_TINT, PARITY_PALETTE, PARITY_SEGMENT_PERCENT_CLASS } from '@/app/lib/parityPalette';
 import { navigatorOutsideCoverageTooltipBody } from '@/app/lib/navigatorDateCoverage';
 
 const DEFAULT_INCLUSION_PLAN_NAMES = [
@@ -2096,7 +2096,7 @@ function ParityAnalysisContent({
     if (!myRate || myRate === 0) {
       const { lossCount, totalCount } = getDateParityCounts(dateIdx);
       if (totalCount > 0 && lossCount === totalCount) {
-        return { bg: '#fee2e2', text: '#991b1b' as const };
+        return { bg: PARITY_COLUMN_TINT.loss.bg, text: PARITY_COLUMN_TINT.loss.text };
       }
       return { bg: '#f3f4f6', text: '#6b7280' as const };
     }
@@ -2110,9 +2110,9 @@ function ParityAnalysisContent({
         : winCount >= meetCount && winCount >= lossCount
           ? 'Win'
           : 'Meet';
-    if (dominant === 'Win') return { bg: '#ecfdf5', text: '#14532d' as const };
-    if (dominant === 'Meet') return { bg: '#fffbeb', text: '#78350f' as const };
-    return { bg: '#fee2e2', text: '#991b1b' as const };
+    if (dominant === 'Win') return PARITY_COLUMN_TINT.win;
+    if (dominant === 'Meet') return PARITY_COLUMN_TINT.meet;
+    return PARITY_COLUMN_TINT.loss;
   };
 
   /** Win/Meet/Loss mix and parity score (Win% + Meet%) across every channel × visible date with data. */
@@ -2614,8 +2614,16 @@ function ParityAnalysisContent({
                   const isWin = cellDisplay.status === 'Win';
                   const isMeet = cellDisplay.status === 'Meet';
                   const isLoss = cellDisplay.status === 'Loss';
-                  const bgColor = isWin ? '#ecfdf5' : isMeet ? '#fffbeb' : '#fee2e2';
-                  const textColor = isWin ? '#14532d' : isMeet ? '#78350f' : '#991b1b';
+                  const bgColor = isWin
+                    ? PARITY_COLUMN_TINT.win.bg
+                    : isMeet
+                      ? PARITY_COLUMN_TINT.meet.bg
+                      : PARITY_COLUMN_TINT.loss.bg;
+                  const textColor = isWin
+                    ? PARITY_COLUMN_TINT.win.text
+                    : isMeet
+                      ? PARITY_COLUMN_TINT.meet.text
+                      : PARITY_COLUMN_TINT.loss.text;
 
                   const lossAmount = isLoss && cellDisplay.rate ? myRate - cellDisplay.rate : 0;
 

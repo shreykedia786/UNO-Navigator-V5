@@ -21,6 +21,14 @@ const page = await context.newPage();
 // before it finishes look empty; reduced-motion skips animation and shows full paths immediately.
 await page.emulateMedia({ reducedMotion: 'reduce' });
 await page.goto(url, { waitUntil: 'networkidle', timeout: 120000 });
+// App always opens on the access gate first; pick full Navigator so the real chart renders for capture.
+const fullVersion = page.getByRole('button', { name: /Already on Full Version/i });
+try {
+  await fullVersion.waitFor({ state: 'visible', timeout: 15000 });
+  await fullVersion.click();
+} catch {
+  /* already on main or gate copy changed */
+}
 const skip = page.getByRole('button', { name: /Skip Tour/i });
 try {
   await skip.waitFor({ state: 'visible', timeout: 5000 });
