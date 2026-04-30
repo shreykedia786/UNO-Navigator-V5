@@ -9,6 +9,8 @@ type NavigatorIntelligenceLockedRowProps = {
   /** Limited / not-subscribed only: hide the whole preview block (persisted via parent + localStorage). */
   onDismissPreview?: () => void;
   trialRequestSubmitted?: boolean;
+  navigatorUpgradeRequestSubmitted?: boolean;
+  onNavigatorUpgradeRequestAcknowledged?: () => void;
   navigatorUpsellContext?: 'limited' | 'trial_expired';
 };
 
@@ -17,6 +19,8 @@ export function NavigatorIntelligenceLockedRow({
   onRequestTrial,
   onDismissPreview,
   trialRequestSubmitted = false,
+  navigatorUpgradeRequestSubmitted = false,
+  onNavigatorUpgradeRequestAcknowledged,
   navigatorUpsellContext = 'limited'
 }: NavigatorIntelligenceLockedRowProps) {
   const colSpan = 2 + dates.length;
@@ -77,6 +81,8 @@ export function NavigatorIntelligenceLockedRow({
               onRequestTrial={onRequestTrial}
               onDismissPreview={onDismissPreview}
               trialRequestSubmitted={trialRequestSubmitted}
+              navigatorUpgradeRequestSubmitted={navigatorUpgradeRequestSubmitted}
+              onNavigatorUpgradeRequestAcknowledged={onNavigatorUpgradeRequestAcknowledged}
               navigatorUpsellContext={navigatorUpsellContext}
             />
           </div>

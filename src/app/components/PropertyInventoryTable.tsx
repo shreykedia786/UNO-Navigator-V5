@@ -97,6 +97,8 @@ export function PropertyInventoryTable({
   lockedNavigatorPreviewDismissed = false,
   onDismissLockedNavigatorPreview,
   navigatorTrialRequestSubmitted = false,
+  navigatorUpgradeRequestSubmitted = false,
+  onNavigatorUpgradeRequestAcknowledged,
   navigatorUpsellContext = 'limited'
 }: {
   /** When false, competitor / parity chart rows show an upsell to Navigator trial. */
@@ -109,6 +111,9 @@ export function PropertyInventoryTable({
   onDismissLockedNavigatorPreview?: () => void;
   /** Limited flow: user submitted the trial request form; trial is pending activation (not instant). */
   navigatorTrialRequestSubmitted?: boolean;
+  /** Post–trial: user acknowledged the upgrade request; trial-ended CTAs show sent state. */
+  navigatorUpgradeRequestSubmitted?: boolean;
+  onNavigatorUpgradeRequestAcknowledged?: () => void;
   /** Locked-row messaging: never subscribed vs 30-day preview ended. */
   navigatorUpsellContext?: 'limited' | 'trial_expired';
 } = {}) {
@@ -598,6 +603,8 @@ export function PropertyInventoryTable({
                         onRequestTrial={() => onRequestNavigatorTrial?.()}
                         onDismissPreview={onDismissLockedNavigatorPreview}
                         trialRequestSubmitted={navigatorTrialRequestSubmitted}
+                        navigatorUpgradeRequestSubmitted={navigatorUpgradeRequestSubmitted}
+                        onNavigatorUpgradeRequestAcknowledged={onNavigatorUpgradeRequestAcknowledged}
                         navigatorUpsellContext={navigatorUpsellContext}
                       />
                     )}
@@ -764,6 +771,8 @@ export function PropertyInventoryTable({
                         onRequestTrial={() => onRequestNavigatorTrial?.()}
                         onDismissPreview={onDismissLockedNavigatorPreview}
                         trialRequestSubmitted={navigatorTrialRequestSubmitted}
+                        navigatorUpgradeRequestSubmitted={navigatorUpgradeRequestSubmitted}
+                        onNavigatorUpgradeRequestAcknowledged={onNavigatorUpgradeRequestAcknowledged}
                         navigatorUpsellContext={navigatorUpsellContext}
                       />
                     )}
@@ -924,6 +933,8 @@ export function PropertyInventoryTable({
                         onRequestTrial={() => onRequestNavigatorTrial?.()}
                         onDismissPreview={onDismissLockedNavigatorPreview}
                         trialRequestSubmitted={navigatorTrialRequestSubmitted}
+                        navigatorUpgradeRequestSubmitted={navigatorUpgradeRequestSubmitted}
+                        onNavigatorUpgradeRequestAcknowledged={onNavigatorUpgradeRequestAcknowledged}
                         navigatorUpsellContext={navigatorUpsellContext}
                       />
                     )}

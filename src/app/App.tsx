@@ -19,7 +19,9 @@ import {
   dismissNavigatorLockedPreview,
   clearNavigatorLockedPreviewDismiss,
   hasNavigatorTrialRequestSubmitted,
+  hasNavigatorUpgradeRequestSubmitted,
   markNavigatorTrialRequestSubmitted,
+  markNavigatorUpgradeRequestSubmitted,
   ensureExpiredTrialSampleInStorage,
   isNavigatorLimitedUpsell,
   markNavigatorGateCompleted,
@@ -40,7 +42,13 @@ function initialAccessScreen(): AccessScreen {
  * Navigator access with an active trial window (`STORAGE_TRIAL_START` within 30 days): same top strip as limited
  * upsell (dark gradient), so users see how many days remain before upgrading.
  */
-function NavigatorTrialBanner({ onUpgrade }: { onUpgrade: () => void }) {
+function NavigatorTrialBanner({
+  onUpgrade,
+  upgradeRequestSubmitted = false
+}: {
+  onUpgrade: () => void;
+  upgradeRequestSubmitted?: boolean;
+}) {
   const left = trialDaysRemaining();
   if (left == null || left < 1) return null;
   return (
@@ -58,10 +66,11 @@ function NavigatorTrialBanner({ onUpgrade }: { onUpgrade: () => void }) {
             type="button"
             size="sm"
             variant="outline"
-            className="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded border border-white bg-transparent px-4 text-[14px] font-medium text-white shadow-none hover:bg-white/10 hover:text-white sm:w-auto"
+            disabled={upgradeRequestSubmitted}
+            className="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded border border-white bg-transparent px-4 text-[14px] font-medium text-white shadow-none hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:border-white/25 disabled:bg-white/[0.04] disabled:text-white/55 disabled:hover:bg-white/[0.04] sm:w-auto"
             onClick={onUpgrade}
           >
-            Upgrade anytime
+            {upgradeRequestSubmitted ? 'Upgrade Request Sent' : 'Upgrade anytime'}
           </Button>
         </div>
       </div>
@@ -79,6 +88,7 @@ function NavigatorLimitedBanner({
   onRestoreNavigatorChartPreview,
   onDismiss,
   trialRequestSubmitted,
+  upgradeRequestSubmitted,
   upsellContext
 }: {
   onStartTrial: () => void;
@@ -86,6 +96,8 @@ function NavigatorLimitedBanner({
   onRestoreNavigatorChartPreview?: () => void;
   onDismiss: () => void;
   trialRequestSubmitted: boolean;
+  /** Post–trial banner: user completed the in-app upgrade request acknowledgment. */
+  upgradeRequestSubmitted: boolean;
   upsellContext: 'standard' | 'trial_ended';
 }) {
   const dismiss = () => {
@@ -110,10 +122,16 @@ function NavigatorLimitedBanner({
       <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-center gap-2 text-center sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3 sm:gap-y-2 sm:text-left">
         <p className="max-w-[920px] font-normal leading-snug text-white/95 sm:leading-tight">
           {upsellContext === 'trial_ended' ? (
-            <>
-              Your Navigator trial has ended. Upgrade to continue tracking live competitor pricing and parity
-              insights.
-            </>
+            upgradeRequestSubmitted ? (
+              <>Your upgrade request has been received. Our team will contact you shortly to proceed.</>
+            ) : (
+              <>
+                Your Navigator trial has ended. Upgrade to continue tracking live competitor pricing and parity
+                insights.
+              </>
+            )
+          ) : trialRequestSubmitted ? (
+            <>Your trial request has been received. We&apos;ll notify you once access is enabled.</>
           ) : (
             <>
               <span aria-hidden>👉 </span>
@@ -130,12 +148,16 @@ function NavigatorLimitedBanner({
             type="button"
             size="sm"
             variant="outline"
-            disabled={upsellContext === 'trial_ended' ? false : trialRequestSubmitted}
+            disabled={
+              upsellContext === 'trial_ended' ? upgradeRequestSubmitted : trialRequestSubmitted
+            }
             className="inline-flex h-9 w-full items-center justify-center whitespace-nowrap rounded border border-white bg-transparent px-4 text-[14px] font-medium text-white shadow-none hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:border-white/25 disabled:bg-white/[0.04] disabled:text-white/55 disabled:hover:bg-white/[0.04] sm:w-auto"
             onClick={onStartTrial}
           >
             {upsellContext === 'trial_ended'
-              ? 'Upgrade to full version'
+              ? upgradeRequestSubmitted
+                ? 'Upgrade Request Sent'
+                : 'Upgrade to full version'
               : trialRequestSubmitted
                 ? 'Request already sent'
                 : 'Start your free 30-day trial'}
@@ -165,6 +187,9 @@ export default function App() {
   const [navigatorUpgradeModalOpen, setNavigatorUpgradeModalOpen] = useState(false);
   const [trialEndedModalOpen, setTrialEndedModalOpen] = useState(false);
   const [trialRequestSubmitted, setTrialRequestSubmitted] = useState(() => hasNavigatorTrialRequestSubmitted());
+  const [upgradeRequestSubmitted, setUpgradeRequestSubmitted] = useState(() =>
+    hasNavigatorUpgradeRequestSubmitted()
+  );
   const [lockedNavigatorPreviewDismissed, setLockedNavigatorPreviewDismissed] = useState(
     () => isNavigatorLockedPreviewDismissed()
   );
@@ -268,6 +293,11 @@ export default function App() {
     syncEntitlement();
   }, [syncEntitlement]);
 
+  const acknowledgeNavigatorUpgradeRequest = useCallback(() => {
+    markNavigatorUpgradeRequestSubmitted();
+    setUpgradeRequestSubmitted(true);
+  }, []);
+
   /** Post-trial path: gate → main with `trial_expired` upsell. Seeds a sample ended trial locally when none exists (demo). */
   const enterMainAfterTrialExpired = () => {
     ensureExpiredTrialSampleInStorage();
@@ -286,6 +316,7 @@ export default function App() {
     }
     try {
       sessionStorage.removeItem(LIMITED_BANNER_DISMISS_KEY);
+      sessionStorage.removeItem(TRIAL_ENDED_MODAL_DISMISS_KEY);
     } catch {
       /* ignore */
     }
@@ -360,6 +391,10 @@ export default function App() {
       setTrialEndedModalOpen(false);
       return;
     }
+    if (upgradeRequestSubmitted) {
+      setTrialEndedModalOpen(false);
+      return;
+    }
     let dismissed = false;
     try {
       dismissed = sessionStorage.getItem(TRIAL_ENDED_MODAL_DISMISS_KEY) === '1';
@@ -367,7 +402,7 @@ export default function App() {
       dismissed = false;
     }
     setTrialEndedModalOpen(!dismissed);
-  }, [accessScreen, entitlement]);
+  }, [accessScreen, entitlement, upgradeRequestSubmitted]);
 
   const dismissTrialEndedModal = useCallback(() => {
     try {
@@ -429,7 +464,7 @@ export default function App() {
         <NavigatorLimitedBanner
           onStartTrial={() => {
             if (entitlement === 'trial_expired') {
-              setNavigatorUpgradeModalOpen(true);
+              if (!upgradeRequestSubmitted) setNavigatorUpgradeModalOpen(true);
               return;
             }
             if (!trialRequestSubmitted) setTrialModalOpen(true);
@@ -438,6 +473,7 @@ export default function App() {
           onRestoreNavigatorChartPreview={handleRestoreLockedNavigatorPreview}
           onDismiss={handleLimitedBannerDismiss}
           trialRequestSubmitted={trialRequestSubmitted}
+          upgradeRequestSubmitted={upgradeRequestSubmitted}
           upsellContext={entitlement === 'trial_expired' ? 'trial_ended' : 'standard'}
         />
       ) : null}
@@ -483,7 +519,12 @@ export default function App() {
         </div>
       ) : null}
       {navigatorIntelligenceUnlocked(entitlement) && trialDaysRemaining() != null ? (
-        <NavigatorTrialBanner onUpgrade={() => setNavigatorUpgradeModalOpen(true)} />
+        <NavigatorTrialBanner
+          onUpgrade={() => {
+            if (!upgradeRequestSubmitted) setNavigatorUpgradeModalOpen(true);
+          }}
+          upgradeRequestSubmitted={upgradeRequestSubmitted}
+        />
       ) : null}
       <Header
         onUnoLogoClick={() => {
@@ -498,6 +539,7 @@ export default function App() {
           setExtendedUnoBeyondNavigator(false);
           try {
             sessionStorage.removeItem(LIMITED_BANNER_DISMISS_KEY);
+            sessionStorage.removeItem(TRIAL_ENDED_MODAL_DISMISS_KEY);
           } catch {
             /* ignore */
           }
@@ -538,6 +580,8 @@ export default function App() {
           lockedNavigatorPreviewDismissed={limitedLikeUpsell ? lockedNavigatorPreviewDismissed : false}
           onDismissLockedNavigatorPreview={limitedLikeUpsell ? handleDismissLockedNavigatorPreview : undefined}
           navigatorTrialRequestSubmitted={trialRequestSubmitted}
+          navigatorUpgradeRequestSubmitted={upgradeRequestSubmitted}
+          onNavigatorUpgradeRequestAcknowledged={acknowledgeNavigatorUpgradeRequest}
           navigatorUpsellContext={entitlement === 'trial_expired' ? 'trial_expired' : 'limited'}
         />
       </div>
@@ -585,19 +629,26 @@ export default function App() {
       />
       <NavigatorTrialEndedModal
         open={trialEndedModalOpen}
+        upgradeRequestSubmitted={upgradeRequestSubmitted}
         onOpenChange={(next) => {
           if (!next) dismissTrialEndedModal();
           else setTrialEndedModalOpen(true);
         }}
         onSkip={dismissTrialEndedModal}
         onUpgradeNow={() => {
+          if (upgradeRequestSubmitted) return;
           dismissTrialEndedModal();
           setNavigatorUpgradeModalOpen(true);
         }}
       />
       <NavigatorUpgradeRequestModal
         open={navigatorUpgradeModalOpen}
-        onOpenChange={setNavigatorUpgradeModalOpen}
+        onOpenChange={(open) => {
+          if (navigatorUpgradeModalOpen && !open) {
+            acknowledgeNavigatorUpgradeRequest();
+          }
+          setNavigatorUpgradeModalOpen(open);
+        }}
       />
     </div>
   );

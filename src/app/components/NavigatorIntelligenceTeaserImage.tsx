@@ -684,6 +684,9 @@ type NavigatorIntelligenceTeaserImageProps = {
   onDismissPreview?: () => void;
   /** After submitting the 30-day trial form: primary CTA shows request sent; access is not instant. */
   trialRequestSubmitted?: boolean;
+  /** Post–trial: user acknowledged upgrade request; primary CTA shows Upgrade Request Sent. */
+  navigatorUpgradeRequestSubmitted?: boolean;
+  onNavigatorUpgradeRequestAcknowledged?: () => void;
   /** Shapes lead strip + overlay copy when the 30-day preview has ended vs never subscribed. */
   navigatorUpsellContext?: 'limited' | 'trial_expired';
 };
@@ -696,10 +699,13 @@ export function NavigatorIntelligenceTeaserImage({
   notSubscribedLead = false,
   onDismissPreview,
   trialRequestSubmitted = false,
+  navigatorUpgradeRequestSubmitted = false,
+  onNavigatorUpgradeRequestAcknowledged,
   navigatorUpsellContext = 'limited'
 }: NavigatorIntelligenceTeaserImageProps) {
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [upgradeRequestModalOpen, setUpgradeRequestModalOpen] = useState(false);
+  const upgradeModalWasOpenRef = useRef(false);
 
   useEffect(() => {
     if (pinnedId === null) return;
@@ -767,24 +773,38 @@ export function NavigatorIntelligenceTeaserImage({
             >
           <div className="text-center text-[11px] leading-snug text-white/90 sm:text-[12px]">
             {trialRequestSubmitted && navigatorUpsellContext !== 'trial_expired' ? (
-              <p>
-                We&apos;ve received your trial request. Navigator access is turned on by our team after review, so it
-                won&apos;t appear immediately. The snapshot below stays illustrative. Questions?{' '}
-                <a
-                  href={`mailto:${SUPPORT_EMAIL}`}
-                  className="font-semibold text-white underline decoration-white/45 underline-offset-2 transition-colors hover:decoration-white"
-                >
-                  {SUPPORT_EMAIL}
-                </a>
-              </p>
-            ) : navigatorUpsellContext === 'trial_expired' ? (
               <>
-                <p className="text-[14px] font-semibold text-white">Your trial has ended</p>
+                <p className="text-[14px] font-semibold text-white">Trial request received</p>
                 <p className="mt-1 text-[11px] leading-snug text-white/85 sm:text-[12px]">
-                  You&apos;re no longer seeing real-time competitor pricing insights. Upgrade to continue tracking your
-                  pricing and stay competitive.
+                  Our team is reviewing your request. Your 30-day trial will be activated shortly.
+                </p>
+                <p className="mt-2 text-[10px] leading-snug text-white/55 sm:text-[11px]">
+                  For any queries, contact{' '}
+                  <a
+                    href={`mailto:${SUPPORT_EMAIL}`}
+                    className="font-semibold text-white/70 underline decoration-white/35 underline-offset-2 transition-colors hover:text-white hover:decoration-white/55"
+                  >
+                    {SUPPORT_EMAIL}
+                  </a>
                 </p>
               </>
+            ) : navigatorUpsellContext === 'trial_expired' ? (
+              navigatorUpgradeRequestSubmitted ? (
+                <>
+                  <p className="text-[14px] font-semibold text-white">Upgrade request received</p>
+                  <p className="mt-1 text-[11px] leading-snug text-white/85 sm:text-[12px]">
+                    Our team will contact you shortly to help you upgrade to the full version.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[14px] font-semibold text-white">Your trial has ended</p>
+                  <p className="mt-1 text-[11px] leading-snug text-white/85 sm:text-[12px]">
+                    You&apos;re no longer seeing real-time competitor pricing insights. Upgrade to continue tracking your
+                    pricing and stay competitive.
+                  </p>
+                </>
+              )
             ) : (
               <>
                 <p className="text-[14px] font-semibold text-white">Unlock your pricing insights</p>
@@ -797,14 +817,20 @@ export function NavigatorIntelligenceTeaserImage({
           {navigatorUpsellContext === 'trial_expired' ? (
             <button
               type="button"
-              aria-label="Request upgrade to full Navigator version"
-              className="inline-flex h-9 min-h-9 w-full min-w-0 cursor-pointer items-center justify-center rounded-md border-0 bg-[#2753eb] px-2 py-1.5 text-center text-[12px] font-semibold leading-tight text-white shadow-md transition-colors hover:bg-[#1e45c7] sm:h-10 sm:text-[13px]"
+              disabled={navigatorUpgradeRequestSubmitted}
+              aria-label={
+                navigatorUpgradeRequestSubmitted
+                  ? 'Request sent; our team will contact you to complete upgrade'
+                  : 'Request upgrade to full Navigator version'
+              }
+              className="inline-flex h-9 min-h-9 w-full min-w-0 cursor-pointer items-center justify-center rounded-md border-0 bg-[#2753eb] px-2 py-1.5 text-center text-[12px] font-semibold leading-tight text-white shadow-md transition-colors hover:bg-[#1e45c7] disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-white/90 disabled:shadow-none disabled:hover:bg-slate-600 sm:h-10 sm:text-[13px]"
               onClick={(e) => {
                 e.stopPropagation();
+                if (navigatorUpgradeRequestSubmitted) return;
                 setUpgradeRequestModalOpen(true);
               }}
             >
-              👉 Upgrade to continue
+              {navigatorUpgradeRequestSubmitted ? 'Upgrade Request Sent' : '👉 Upgrade to continue'}
             </button>
           ) : (
             <Button
@@ -812,7 +838,7 @@ export function NavigatorIntelligenceTeaserImage({
               disabled={trialRequestSubmitted}
               aria-label={
                 trialRequestSubmitted
-                  ? 'Trial request already submitted; our team will enable access after review'
+                  ? 'Request sent; our team will activate your trial shortly'
                   : 'Start your 30-day free trial to unlock competitor insights'
               }
               onClick={(e) => {
@@ -822,7 +848,7 @@ export function NavigatorIntelligenceTeaserImage({
               className="inline-flex h-9 min-h-9 w-full min-w-0 items-center justify-center bg-[#2753eb] px-2 py-1.5 text-center text-[12px] font-semibold leading-tight text-white shadow-md hover:bg-[#1e45c7] disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-white/90 disabled:shadow-none disabled:hover:bg-slate-600 sm:h-10 sm:text-[13px]"
             >
               <span className="min-w-0 px-0.5">
-                {trialRequestSubmitted ? 'Request already sent' : '👉 Start 30-day free trial'}
+                {trialRequestSubmitted ? 'Request Sent' : '👉 Start 30-day free trial'}
               </span>
             </Button>
           )}
@@ -836,7 +862,7 @@ export function NavigatorIntelligenceTeaserImage({
                   onDismissPreview();
                 }}
               >
-                Maybe later
+                Close preview
               </button>
               <p className="mt-1 text-center text-[9px] leading-snug text-white/60 sm:text-[10px]">
                 {navigatorUpsellContext === 'trial_expired'
@@ -848,7 +874,16 @@ export function NavigatorIntelligenceTeaserImage({
             </div>
           </div>
 
-        <NavigatorUpgradeRequestModal open={upgradeRequestModalOpen} onOpenChange={setUpgradeRequestModalOpen} />
+        <NavigatorUpgradeRequestModal
+          open={upgradeRequestModalOpen}
+          onOpenChange={(open) => {
+            if (upgradeModalWasOpenRef.current && !open) {
+              onNavigatorUpgradeRequestAcknowledged?.();
+            }
+            upgradeModalWasOpenRef.current = open;
+            setUpgradeRequestModalOpen(open);
+          }}
+        />
 
         {navigatorUpsellContext !== 'trial_expired'
           ? HOTSPOTS.map((h) => (

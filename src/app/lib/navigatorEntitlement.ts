@@ -4,6 +4,8 @@ export const STORAGE_SUBSCRIBED = 'unoNavigatorSubscribed';
 export const STORAGE_TRIAL_START = 'unoNavigatorTrialStartedAt';
 /** User submitted the in-app 30-day trial request form; access is pending team setup (not instant). */
 export const STORAGE_TRIAL_REQUEST_SUBMITTED = 'unoNavigatorTrialRequestSubmitted';
+/** Post–free-trial: user acknowledged the in-app Navigator upgrade request flow. */
+export const STORAGE_UPGRADE_REQUEST_SUBMITTED = 'unoNavigatorUpgradeRequestSubmitted';
 /** User completed first-run gate (UNO + Navigator) — go to Rates & Inventory even without Navigator. */
 export const STORAGE_GATE_COMPLETED = 'unoNavigatorGateCompleted';
 
@@ -67,6 +69,7 @@ export function setNavigatorFullSubscriber(): void {
     localStorage.setItem(STORAGE_SUBSCRIBED, 'true');
     localStorage.setItem(STORAGE_GATE_COMPLETED, 'true');
     localStorage.removeItem(STORAGE_TRIAL_REQUEST_SUBMITTED);
+    localStorage.removeItem(STORAGE_UPGRADE_REQUEST_SUBMITTED);
   } catch {
     /* ignore */
   }
@@ -120,11 +123,28 @@ export function hasNavigatorTrialRequestSubmitted(): boolean {
   }
 }
 
+export function markNavigatorUpgradeRequestSubmitted(): void {
+  try {
+    localStorage.setItem(STORAGE_UPGRADE_REQUEST_SUBMITTED, 'true');
+  } catch {
+    /* ignore */
+  }
+}
+
+export function hasNavigatorUpgradeRequestSubmitted(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_UPGRADE_REQUEST_SUBMITTED) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 export function startNavigatorTrial(): void {
   try {
     localStorage.setItem(STORAGE_TRIAL_START, new Date().toISOString());
     localStorage.setItem(STORAGE_GATE_COMPLETED, 'true');
     localStorage.removeItem(STORAGE_TRIAL_REQUEST_SUBMITTED);
+    localStorage.removeItem(STORAGE_UPGRADE_REQUEST_SUBMITTED);
   } catch {
     /* ignore */
   }

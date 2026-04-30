@@ -7,13 +7,16 @@ export type NavigatorTrialEndedModalProps = {
   onOpenChange: (open: boolean) => void;
   onUpgradeNow: () => void;
   onSkip: () => void;
+  /** After the user acknowledged the upgrade flow; primary CTA reflects request sent. */
+  upgradeRequestSubmitted?: boolean;
 };
 
 export function NavigatorTrialEndedModal({
   open,
   onOpenChange,
   onUpgradeNow,
-  onSkip
+  onSkip,
+  upgradeRequestSubmitted = false
 }: NavigatorTrialEndedModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -69,8 +72,13 @@ export function NavigatorTrialEndedModal({
             >
               Maybe later
             </Button>
-            <Button type="button" onClick={onUpgradeNow} className="h-10 bg-[#2753eb] text-white hover:bg-[#1f45c5]">
-              Upgrade now
+            <Button
+              type="button"
+              disabled={upgradeRequestSubmitted}
+              onClick={onUpgradeNow}
+              className="h-10 bg-[#2753eb] text-white hover:bg-[#1f45c5] disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-white/90 disabled:hover:bg-slate-600"
+            >
+              {upgradeRequestSubmitted ? 'Upgrade Request Sent' : 'Upgrade now'}
             </Button>
           </div>
         </div>
