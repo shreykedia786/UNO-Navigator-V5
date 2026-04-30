@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { PARITY_PALETTE } from '@/app/lib/parityPalette';
 import { LegendIconMax, LegendIconMin, LegendIconMyRate } from './CompetitorChartLegendIcons';
+import { CompetitorPricingPreview, ChannelParityPreview } from '@/app/components/PricingGapWelcomeAnimation';
 
 interface OnboardingStep {
   id: string;
@@ -78,9 +79,16 @@ const NAVIGATOR_MENU_STEP: OnboardingStep = {
 const LIMITED_ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'welcome-limited',
-    title: 'Know when your pricing is losing bookings',
-    description:
-      'Identify where your rates are higher, lower, or perfectly matched with competitors across dates and room types.',
+    title: 'Your pricing might be costing you bookings',
+    description: '',
+    targetSelector: '',
+    position: 'bottom',
+    highlightPadding: 0
+  },
+  {
+    id: 'welcome-parity-limited',
+    title: 'Make sure your room sells at the right price everywhere',
+    description: '',
     targetSelector: '',
     position: 'bottom',
     highlightPadding: 0
@@ -143,7 +151,8 @@ export function OnboardingTour({
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === steps.length - 1;
   const isCenterModal = !step.targetSelector; // Check if this should be a centered modal
-  const isWelcomeStep = step.id === 'welcome' || step.id === 'welcome-limited';
+  const isLimitedWelcomeStep = step.id === 'welcome-limited' || step.id === 'welcome-parity-limited';
+  const isWelcomeStep = step.id === 'welcome' || isLimitedWelcomeStep;
   const isNavigatorMenuStep = step.id === 'navigator-menu';
 
   const getTooltipWidth = (s: OnboardingStep) => {
@@ -152,7 +161,11 @@ export function OnboardingTour({
   };
 
   const getTooltipHeight = () => {
-    if (isWelcomeStep) return step.id === 'welcome-limited' ? 480 : 460;
+    if (isWelcomeStep) {
+      if (step.id === 'welcome-limited') return 560;
+      if (step.id === 'welcome-parity-limited') return 600;
+      return 460;
+    }
     if (step.id === 'find-it') return 320;
     if (step.id === 'expand-room-limited') return 280;
     if (step.id === 'competitor-graph') return 300;
@@ -396,8 +409,12 @@ export function OnboardingTour({
                 top: '50%',
                 left: '50%',
                 transform: isVisible ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0.95)',
-                width: isWelcomeStep ? 'min(460px, calc(100vw - 2rem))' : '420px',
-                maxWidth: isWelcomeStep ? '460px' : undefined,
+                width: isLimitedWelcomeStep
+                  ? 'min(500px, calc(100vw - 2rem))'
+                  : isWelcomeStep
+                    ? 'min(460px, calc(100vw - 2rem))'
+                    : '420px',
+                maxWidth: isLimitedWelcomeStep ? '500px' : isWelcomeStep ? '460px' : undefined,
                 opacity: isVisible ? 1 : 0
               }
             : {
@@ -433,9 +450,7 @@ export function OnboardingTour({
               <div>
                 <h3 className="text-[15px] font-bold leading-tight mb-1">{step.title}</h3>
                 <p className="text-[11px] text-white/80">
-                  {variant === 'limited'
-                    ? `Step ${currentStep + 1} of 2`
-                    : `Step ${currentStep + 1} of ${steps.length}`}
+                  Step {currentStep + 1} of {steps.length}
                 </p>
               </div>
             </div>
@@ -483,46 +498,17 @@ export function OnboardingTour({
             </>
           ) : null}
 
-          {/* Welcome — feature spotlight */}
+          {/* Welcome — full trial: two cards; limited trial: dedicated preview per step */}
           {isWelcomeStep && (
-            <div className="space-y-4">
-              <p className="text-[13px] leading-relaxed text-slate-600">{step.description}</p>
-              <div className="grid gap-3">
-                {step.id === 'welcome-limited' ? (
-                  <>
-                    <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-                      <div className="flex gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#2753eb] ring-1 ring-blue-200/70">
-                          <BarChart3 className="h-5 w-5" strokeWidth={2} />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-[13px] font-bold leading-snug text-slate-900">
-                            Spot missed opportunities
-                          </h4>
-                          <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-                            Find dates where competitor pricing is more attractive and adjust before you lose bookings.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-                      <div className="flex gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80">
-                          <Scale className="h-5 w-5" strokeWidth={2} />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-[13px] font-bold leading-snug text-slate-900">
-                            Stay competitive across channels
-                          </h4>
-                          <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-                            Track where you&apos;re winning, matching, or losing on price at a glance.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
+            <div className={isLimitedWelcomeStep ? 'space-y-3' : 'space-y-4'}>
+              {step.id === 'welcome-limited' ? (
+                <CompetitorPricingPreview />
+              ) : step.id === 'welcome-parity-limited' ? (
+                <ChannelParityPreview />
+              ) : (
+                <>
+                  <p className="text-[13px] leading-relaxed text-slate-600">{step.description}</p>
+                  <div className="grid gap-3">
                     <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
                       <div className="flex gap-3">
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#2753eb] ring-1 ring-blue-200/70">
@@ -553,18 +539,12 @@ export function OnboardingTour({
                         </div>
                       </div>
                     </div>
-                  </>
-                )}
-              </div>
-              {step.id === 'welcome-limited' ? (
-                <p className="text-center text-[11px] leading-snug text-slate-500">
-                  This is a preview. Unlock insights for your property with a free trial.
-                </p>
-              ) : (
-                <p className="text-center text-[10px] leading-snug text-slate-400">
-                  {steps.length <= 2 ? '~30 seconds' : '~1 minute'} · {steps.length} quick step
-                  {steps.length === 1 ? '' : 's'}
-                </p>
+                  </div>
+                  <p className="text-center text-[10px] leading-snug text-slate-400">
+                    {steps.length <= 2 ? '~30 seconds' : '~1 minute'} · {steps.length} quick step
+                    {steps.length === 1 ? '' : 's'}
+                  </p>
+                </>
               )}
             </div>
           )}
@@ -776,7 +756,7 @@ export function OnboardingTour({
                 onClick={handleSkip}
                 className="text-[13px] text-gray-500 hover:text-gray-700 font-medium transition-colors"
               >
-                {step.id === 'welcome-limited' ? 'Skip' : 'Skip Tour'}
+                {isLimitedWelcomeStep ? 'Skip' : 'Skip Tour'}
               </button>
 
               <div className="flex items-center gap-2">
@@ -797,15 +777,18 @@ export function OnboardingTour({
                   className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-white bg-[#2753eb] hover:bg-[#1e3db8] rounded-lg transition-colors"
                 >
                   {step.id === 'welcome-limited'
-                    ? '👉 Explore insights'
-                    : step.id === 'expand-room-limited'
-                      ? '👉 Got it'
-                      : isLastStep
-                        ? 'Finish'
-                        : 'Next'}
-                  {!isLastStep && step.id !== 'welcome-limited' && step.id !== 'expand-room-limited' && (
+                    ? 'Next: channel parity'
+                    : step.id === 'welcome-parity-limited'
+                      ? 'See my pricing insights'
+                      : step.id === 'expand-room-limited'
+                        ? '👉 Got it'
+                        : isLastStep
+                          ? 'Finish'
+                          : 'Next'}
+                  {!isLastStep && !isLimitedWelcomeStep && step.id !== 'expand-room-limited' && (
                     <ArrowRight className="w-3.5 h-3.5" />
                   )}
+                  {step.id === 'welcome-limited' && <ArrowRight className="w-3.5 h-3.5" />}
                 </button>
               </div>
             </div>
