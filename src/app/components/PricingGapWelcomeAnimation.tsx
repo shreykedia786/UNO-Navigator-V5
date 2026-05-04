@@ -559,9 +559,7 @@ export function NavigatorIntroPreview() {
         Monitor competitor pricing and fix parity issues across channels.
       </p>
 
-      <IntroVisual />
-
-      <div className="mt-3 grid gap-2">
+      <div className="grid gap-2">
         <ValuePoint
           icon="chart"
           iconTone="blue"
@@ -574,6 +572,10 @@ export function NavigatorIntroPreview() {
           title="Fix parity across channels"
           body="Keep your prices consistent across OTAs."
         />
+      </div>
+
+      <div className="mt-3">
+        <IntroVisual />
       </div>
     </div>
   );

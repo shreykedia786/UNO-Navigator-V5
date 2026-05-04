@@ -22,6 +22,7 @@ import {
   hasNavigatorUpgradeRequestSubmitted,
   markNavigatorTrialRequestSubmitted,
   markNavigatorUpgradeRequestSubmitted,
+  resetNavigatorRequestFlagsForDemo,
   ensureExpiredTrialSampleInStorage,
   isNavigatorLimitedUpsell,
   markNavigatorGateCompleted,
@@ -32,6 +33,13 @@ import {
 } from '@/app/lib/navigatorEntitlement';
 
 type AccessScreen = 'gate' | 'main';
+
+/**
+ * Demo: clear trial-request + upgrade-request flags once per page load so each
+ * browser refresh replays the request flows from scratch. Runs at module init
+ * before any `useState` initializers read from localStorage.
+ */
+resetNavigatorRequestFlagsForDemo();
 
 function initialAccessScreen(): AccessScreen {
   // Every load / refresh: start on the access gate (three paths when a prior trial has expired).

@@ -139,6 +139,20 @@ export function hasNavigatorUpgradeRequestSubmitted(): boolean {
   }
 }
 
+/**
+ * Demo / QA: every browser refresh starts the trial-request and upgrade-request
+ * flows from a clean state, so reviewers can replay them without manually
+ * clearing storage. Should be called once at app boot before any state reads.
+ */
+export function resetNavigatorRequestFlagsForDemo(): void {
+  try {
+    localStorage.removeItem(STORAGE_TRIAL_REQUEST_SUBMITTED);
+    localStorage.removeItem(STORAGE_UPGRADE_REQUEST_SUBMITTED);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function startNavigatorTrial(): void {
   try {
     localStorage.setItem(STORAGE_TRIAL_START, new Date().toISOString());
