@@ -1,4 +1,4 @@
-import { ChevronDown, AlertCircle } from 'lucide-react';
+import { ChevronDown, AlertCircle, RotateCcw } from 'lucide-react';
 import svgPaths from "../../imports/svg-n3t9v38tfc";
 import imgLogo from "figma:asset/036db285069a2b8b94cc4ad3c602ba0af3a2f1fe.png";
 
@@ -76,25 +76,7 @@ export function Header({
 
         {/* Right Section */}
         <div className="flex items-center justify-end gap-[10px] flex-1 min-w-0">
-          {onReplayNavigatorOnboarding ? (
-            <>
-              <button
-                type="button"
-                onClick={onReplayNavigatorOnboarding}
-                className="shrink-0 rounded-md px-2 py-1 text-[12px] font-medium text-[#2753eb] underline decoration-[#2753eb]/35 underline-offset-2 transition-colors hover:bg-[#2753eb]/10 hover:decoration-[#2753eb] sm:text-[13px]"
-                title="Restart the Navigator onboarding tour from the beginning"
-              >
-                Replay tour
-              </button>
-              <div className="h-[19px] w-0 relative">
-                <div className="absolute inset-[0_-1px_0_0]">
-                  <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 1 19">
-                    <line stroke="#707070" strokeOpacity="0.4" x1="0.5" x2="0.5" y1="0" y2="19" />
-                  </svg>
-                </div>
-              </div>
-            </>
-          ) : null}
+          {/* Replay tour moved to the secondary utility row below — keeps What's New? as the primary right-side CTA. */}
           {/* What's New */}
           <div className="relative h-[20px] w-[75px]">
             <div className="absolute inset-[0_4%_0_0] flex items-center justify-center">
@@ -128,6 +110,23 @@ export function Header({
       <div className="bg-[#f8f7f7] w-full border-t border-[#e5e7eb]">
         <div className="max-w-[1440px] mx-auto w-full flex items-center justify-end px-[50px] pt-px">
         <div className="flex items-center gap-[32px]">
+          {/* Replay tour — tertiary utility, lowest visual weight; only when handler is provided */}
+          {onReplayNavigatorOnboarding ? (
+            <button
+              type="button"
+              onClick={onReplayNavigatorOnboarding}
+              title="Restart the Navigator onboarding tour from the beginning"
+              className="group flex items-center gap-1.5 py-[12px] text-[13px] font-normal leading-[20px] tracking-[-0.1504px] text-[#5b6477] transition-colors hover:text-[#2753eb] focus-visible:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-[#2753eb]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8f7f7]"
+            >
+              <RotateCcw
+                className="h-3.5 w-3.5 opacity-70 transition-transform duration-300 group-hover:-rotate-180 group-hover:opacity-100"
+                strokeWidth={2}
+                aria-hidden
+              />
+              <span className="whitespace-nowrap">Replay tour</span>
+            </button>
+          ) : null}
+
           {/* ARI Resync Link */}
           <div className="py-[12px]">
             <p className="font-normal text-[14px] text-[#2753eb] leading-[20px] tracking-[-0.1504px]">
