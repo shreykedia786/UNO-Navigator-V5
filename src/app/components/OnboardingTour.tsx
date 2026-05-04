@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { PARITY_PALETTE } from '@/app/lib/parityPalette';
 import { LegendIconMax, LegendIconMin, LegendIconMyRate } from './CompetitorChartLegendIcons';
-import { CompetitorPricingPreview, ChannelParityPreview } from '@/app/components/PricingGapWelcomeAnimation';
+import { NavigatorIntroPreview } from '@/app/components/PricingGapWelcomeAnimation';
 
 interface OnboardingStep {
   id: string;
@@ -78,16 +78,8 @@ const NAVIGATOR_MENU_STEP: OnboardingStep = {
 /** Not subscribed / limited demo: value-led welcome + expand row (preview mode; trial via top banner). */
 const LIMITED_ONBOARDING_STEPS: OnboardingStep[] = [
   {
-    id: 'welcome-limited',
-    title: 'Your pricing might be costing you bookings',
-    description: '',
-    targetSelector: '',
-    position: 'bottom',
-    highlightPadding: 0
-  },
-  {
-    id: 'welcome-parity-limited',
-    title: 'Make sure your room sells at the right price everywhere',
+    id: 'welcome-intro-limited',
+    title: 'Meet Navigator',
     description: '',
     targetSelector: '',
     position: 'bottom',
@@ -151,7 +143,7 @@ export function OnboardingTour({
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === steps.length - 1;
   const isCenterModal = !step.targetSelector; // Check if this should be a centered modal
-  const isLimitedWelcomeStep = step.id === 'welcome-limited' || step.id === 'welcome-parity-limited';
+  const isLimitedWelcomeStep = step.id === 'welcome-intro-limited';
   const isWelcomeStep = step.id === 'welcome' || isLimitedWelcomeStep;
   const isNavigatorMenuStep = step.id === 'navigator-menu';
 
@@ -162,8 +154,7 @@ export function OnboardingTour({
 
   const getTooltipHeight = () => {
     if (isWelcomeStep) {
-      if (step.id === 'welcome-limited') return 560;
-      if (step.id === 'welcome-parity-limited') return 600;
+      if (step.id === 'welcome-intro-limited') return 540;
       return 460;
     }
     if (step.id === 'find-it') return 320;
@@ -501,10 +492,8 @@ export function OnboardingTour({
           {/* Welcome — full trial: two cards; limited trial: dedicated preview per step */}
           {isWelcomeStep && (
             <div className={isLimitedWelcomeStep ? 'space-y-3' : 'space-y-4'}>
-              {step.id === 'welcome-limited' ? (
-                <CompetitorPricingPreview />
-              ) : step.id === 'welcome-parity-limited' ? (
-                <ChannelParityPreview />
+              {step.id === 'welcome-intro-limited' ? (
+                <NavigatorIntroPreview />
               ) : (
                 <>
                   <p className="text-[13px] leading-relaxed text-slate-600">{step.description}</p>
@@ -776,19 +765,17 @@ export function OnboardingTour({
                   onClick={handleNext}
                   className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium text-white bg-[#2753eb] hover:bg-[#1e3db8] rounded-lg transition-colors"
                 >
-                  {step.id === 'welcome-limited'
-                    ? 'Next: channel parity'
-                    : step.id === 'welcome-parity-limited'
-                      ? 'See my pricing insights'
-                      : step.id === 'expand-room-limited'
-                        ? '👉 Got it'
-                        : isLastStep
-                          ? 'Finish'
-                          : 'Next'}
+                  {step.id === 'welcome-intro-limited'
+                    ? 'See how it works'
+                    : step.id === 'expand-room-limited'
+                      ? '👉 Got it'
+                      : isLastStep
+                        ? 'Finish'
+                        : 'Next'}
                   {!isLastStep && !isLimitedWelcomeStep && step.id !== 'expand-room-limited' && (
                     <ArrowRight className="w-3.5 h-3.5" />
                   )}
-                  {step.id === 'welcome-limited' && <ArrowRight className="w-3.5 h-3.5" />}
+                  {step.id === 'welcome-intro-limited' && <ArrowRight className="w-3.5 h-3.5" />}
                 </button>
               </div>
             </div>

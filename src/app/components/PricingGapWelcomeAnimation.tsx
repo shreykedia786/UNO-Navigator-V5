@@ -1,12 +1,13 @@
-import { Lightbulb, TrendingDown, ShieldCheck } from 'lucide-react';
+import { BarChart3, Lightbulb, Scale, ShieldCheck, TrendingDown } from 'lucide-react';
 
 /**
- * Limited onboarding — two focused preview blocks (one per step):
- *   • CompetitorPricingPreview — multi-day market chart (mirrors RateCandlestickChart)
- *   • ChannelParityPreview     — per-OTA parity panel with a parity score bar
+ * Limited onboarding previews:
+ *   • NavigatorIntroPreview     — Step 0 glimpse: combined mini chart + parity list
+ *   • CompetitorPricingPreview  — multi-day market chart (mirrors RateCandlestickChart)
+ *   • ChannelParityPreview      — per-OTA parity panel with a parity score bar
  *
- * Both visuals use the same Before/After grammar and brand language as the
- * live product, so the step doubles as a teaser for what they'll see inside.
+ * Visuals use the same brand language as the live product so each step
+ * doubles as a teaser for what users will see inside.
  */
 
 const SECTION_KICKER = 'text-[10px] font-bold uppercase tracking-[0.14em] text-slate-700';
@@ -398,6 +399,182 @@ export function ChannelParityPreview() {
       <p className="mt-3 text-center text-[12.5px] font-semibold leading-snug text-slate-800">
         Catch undercutting OTAs before they steal your direct bookings
       </p>
+    </div>
+  );
+}
+
+/* ===========================================================================
+ *  STEP 0 — NAVIGATOR INTRO (glimpse: mini chart + mini parity list)
+ * ========================================================================= */
+
+function IntroCompetitorRow({
+  label,
+  rate,
+  dotColor,
+  highlight
+}: {
+  label: string;
+  rate: string;
+  dotColor: 'red' | 'blue' | 'green';
+  highlight?: boolean;
+}) {
+  const dotClass =
+    dotColor === 'red' ? 'bg-red-500' : dotColor === 'green' ? 'bg-emerald-500' : 'bg-sky-500';
+  const textClass = highlight ? 'text-sky-800' : 'text-slate-700';
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-md px-1.5 py-0.5">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`} aria-hidden />
+        <span className={`truncate text-[10px] font-medium ${textClass}`}>{label}</span>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        <span className={`text-[10px] font-bold tabular-nums ${textClass}`}>{rate}</span>
+        {highlight ? (
+          <span className="text-[9px] font-bold leading-none text-red-600" aria-hidden>
+            ↑
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function IntroChannelRow({
+  name,
+  rate,
+  status,
+  isYours
+}: {
+  name: string;
+  rate: string;
+  status: 'match' | 'lower';
+  isYours?: boolean;
+}) {
+  const isLower = status === 'lower';
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-md px-1.5 py-0.5">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span
+          className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+            isLower ? 'bg-red-500' : isYours ? 'bg-sky-500' : 'bg-emerald-500'
+          }`}
+          aria-hidden
+        />
+        <span
+          className={`truncate text-[10px] font-medium ${
+            isLower ? 'text-red-700' : isYours ? 'text-sky-800' : 'text-slate-700'
+          }`}
+        >
+          {name}
+        </span>
+      </div>
+      <span
+        className={`shrink-0 text-[10px] font-bold tabular-nums ${
+          isLower ? 'text-red-700' : isYours ? 'text-sky-800' : 'text-slate-700'
+        }`}
+      >
+        {rate}
+      </span>
+    </div>
+  );
+}
+
+function IntroVisual() {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-gradient-to-br from-blue-50/50 via-white to-emerald-50/40 p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-3">
+        <div className="flex flex-col">
+          <div className="mb-1.5 flex items-center gap-1">
+            <span className="flex h-4 w-4 items-center justify-center rounded-md bg-blue-50 text-[#2753eb] ring-1 ring-blue-200/70">
+              <BarChart3 className="h-2.5 w-2.5" strokeWidth={2.4} />
+            </span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Competitor</span>
+          </div>
+          <div className="space-y-0.5">
+            <IntroCompetitorRow label="Competitor max" rate="₹3,500" dotColor="red" />
+            <IntroCompetitorRow label="Your rate" rate="₹3,800" dotColor="blue" highlight />
+            <IntroCompetitorRow label="Competitor min" rate="₹2,900" dotColor="green" />
+          </div>
+          <p className="mt-1.5 text-[8.5px] font-medium uppercase tracking-wide text-slate-400">
+            Above competitor max
+          </p>
+        </div>
+
+        <div className="w-px self-stretch bg-gradient-to-b from-transparent via-slate-200 to-transparent" aria-hidden />
+
+        <div className="flex flex-col">
+          <div className="mb-1.5 flex items-center gap-1">
+            <span className="flex h-4 w-4 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/70">
+              <Scale className="h-2.5 w-2.5" strokeWidth={2.4} />
+            </span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500">Channel parity</span>
+          </div>
+          <div className="space-y-0.5">
+            <IntroChannelRow name="Direct" rate="₹3,300" status="match" isYours />
+            <IntroChannelRow name="Booking.com" rate="₹3,300" status="match" />
+            <IntroChannelRow name="MakeMyTrip" rate="₹2,950" status="lower" />
+          </div>
+          <p className="mt-1.5 text-[8.5px] font-medium uppercase tracking-wide text-slate-400">
+            3 channels · 1 undercutting
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ValuePoint({
+  icon,
+  iconTone,
+  title,
+  body
+}: {
+  icon: 'chart' | 'scale';
+  iconTone: 'blue' | 'emerald';
+  title: string;
+  body: string;
+}) {
+  const Icon = icon === 'chart' ? BarChart3 : Scale;
+  const tone =
+    iconTone === 'blue'
+      ? 'bg-blue-50 text-[#2753eb] ring-blue-200/70'
+      : 'bg-emerald-50 text-emerald-700 ring-emerald-200/80';
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-slate-200/90 bg-white p-3 shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 ${tone}`}>
+        <Icon className="h-4 w-4" strokeWidth={2} />
+      </span>
+      <div className="min-w-0">
+        <h4 className="text-[12.5px] font-bold leading-snug text-slate-900">{title}</h4>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">{body}</p>
+      </div>
+    </div>
+  );
+}
+
+export function NavigatorIntroPreview() {
+  return (
+    <div className="onboard-limited-pricing-visual w-full max-w-[460px] mx-auto">
+      <p className="mb-2.5 text-center text-[12.5px] leading-snug text-slate-600">
+        Monitor competitor pricing and fix parity issues across channels.
+      </p>
+
+      <IntroVisual />
+
+      <div className="mt-3 grid gap-2">
+        <ValuePoint
+          icon="chart"
+          iconTone="blue"
+          title="Spot pricing gaps"
+          body="See when your rates are higher or lower than competitors."
+        />
+        <ValuePoint
+          icon="scale"
+          iconTone="emerald"
+          title="Fix parity across channels"
+          body="Keep your prices consistent across OTAs."
+        />
+      </div>
     </div>
   );
 }
